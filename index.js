@@ -11,6 +11,28 @@ const metascraper = require('metascraper')([
 const app = express();
 const ytDlpWrap = new YTDlpWrap(); // Ensure yt-dlp is installed on your system
 const PORT = process.env.PORT || 3000;
+const winston = require('winston');
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.json() // Structured JSON is best for searching logs later
+  ),
+  transports: [
+    // 1. Save all "rip" events to a dedicated audit file
+    new winston.transports.File({ filename: 'audit.log' }),
+    // 2. Also log to console with colors for dev monitoring
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
+    })
+  ]
+});
+
+module.exports = logger;
 
 app.use(express.json());
 
