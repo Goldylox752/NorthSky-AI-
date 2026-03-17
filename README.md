@@ -1,2 +1,1 @@
-# cobalt-ai-pipeline
-# Gif Generator
+Ai Data Pipeline
