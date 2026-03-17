@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # The Express.js Ripper API
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_URL=redis://cache:6379
+      - RIpper_API_KEY=your-super-secret-key
+    depends_on:
+      - cache
+    restart: always
+
+  # Redis for Caching and Rate Limiting
+  cache:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
