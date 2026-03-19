@@ -79,6 +79,34 @@
         <canvas id="memoryChart"></canvas>
     </div>
 </div>
+     async function executeRip() {
+    const url = document.getElementById('urlInput').value;
+    const btn = document.getElementById('ripBtn');
+    const preview = document.getElementById('resultPreview');
+    const output = document.getElementById('jsonOutput');
+
+    if (!url) return alert("Enter a URL");
+
+    // UI Loading State
+    btn.disabled = true;
+    btn.innerHTML = `<span class="animate-spin mr-2">🌀</span> RIPPING...`;
+    preview.classList.remove('hidden');
+    output.innerText = "Queuing task in background...";
+
+    try {
+        // 1. Send to Queue
+        const res = await fetch(`/rip?url=${encodeURIComponent(url)}`);
+        const { jobId } = await res.json();
+
+        // 2. Start Polling for the Result
+        pollStatus(jobId);
+    } catch (err) {
+        output.innerText = "Failed to queue job.";
+        btn.disabled = false;
+        btn.innerText = "RIP";
+    }
+}
+
         <!-- Log Viewer -->
         <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
             <div class="bg-slate-700 px-4 py-2 text-xs font-bold text-slate-300">Live Audit Logs</div>
