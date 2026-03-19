@@ -1,3 +1,41 @@
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const { ripQueue, connection } = require('./src/queue');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
+
+app.use(express.static('public'));
+
+// 1. WebSocket Room Management
+io.on('connection', (socket) => {
+  socket.on('join-job', (jobId) => socket.join(`job-${jobId}`));
+});
+
+// 2. The Rip API
+app.get('/rip', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: 'URL required' });
+
+  // Add to background queue
+  const job = await ripQueue.add('rip-url', { url });
+  res.json({ jobId: job.id });
+});
+
+// 3. Status Endpoint (Fallback)
+app.get('/status/:id', async (req, res) => {
+  const result = await connection.get(`result:${req.params.id}`);
+  res.json(result ? JSON.parse(result) : { status: 'processing' });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Dashboard Live: http://localhost:${PORT}`));
+
+// Export io for the worker (if running in same process for testing)
+module.exports = { io };
+
 const http = require('http');
 const { Server } = require('socket.io');
 
