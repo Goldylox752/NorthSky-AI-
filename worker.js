@@ -1,4 +1,26 @@
 const { io } = require('./app'); // Import the io instance
+const userAgents = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64)...', // Chrome
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)...', // Safari
+  'Mozilla/5.0 (X11; Linux x86_64) Gecko/20100101 Firefox/...' // Firefox
+];
+
+const worker = new Worker('ripper-tasks', async (job) => {
+  // Use job.attemptsMade to pick a different User-Agent each time
+  const uaIndex = job.attemptsMade % userAgents.length;
+  const currentUA = userAgents[uaIndex];
+
+  await job.updateProgress({ status: `Attempt ${job.attemptsMade + 1}: Using ${uaIndex === 0 ? 'Chrome' : 'Firefox'} agent...` });
+
+  try {
+    // Pass the unique User-Agent to your ripping logic
+    const result = await performRip(job.data.url, currentUA);
+    return result;
+  } catch (error) {
+    console.error(`Attempt ${job.attemptsMade + 1} failed for ${job.id}`);
+    throw error; // Throwing the error triggers the 'backoff' retry
+  }
+}, { connection });
 
 const worker = new Worker('ripper-tasks', async (job) => {
   // ... your ripping logic ...
