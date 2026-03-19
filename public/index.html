@@ -21,6 +21,39 @@
                class="flex-1 bg-slate-900 border border-slate-700 rounded px-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition">
         <button onclick="executeRip()" id="ripBtn" 
                 class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded font-bold text-sm transition disabled:opacity-50">
+          async function pollStatus(jobId) {
+    const output = document.getElementById('jsonOutput');
+    const btn = document.getElementById('ripBtn');
+    const badge = document.getElementById('sourceBadge');
+
+    const interval = setInterval(async () => {
+        try {
+            const res = await fetch(`/status/${jobId}`);
+            const data = await res.json();
+
+            if (data && data.status !== "processing") {
+                // SUCCESS: Job is done!
+                clearInterval(interval);
+                lastRipResult = data; // For the download button
+                output.innerText = JSON.stringify(data, null, 2);
+                badge.innerText = "WORKER COMPLETE";
+                badge.className = "bg-green-500/20 text-green-500 text-[10px] px-2 py-0.5 rounded font-bold";
+                
+                btn.disabled = false;
+                btn.innerText = "RIP";
+                updateDashboard(); // Refresh stats
+            } else {
+                // STILL WORKING
+                output.innerText = `Worker is processing Job #${jobId}...`;
+            }
+        } catch (err) {
+            clearInterval(interval);
+            output.innerText = "Error tracking job status.";
+            btn.disabled = false;
+        }
+    }, 2000); // Check every 2 seconds
+}
+
             RIP
         </button>
     </div>
