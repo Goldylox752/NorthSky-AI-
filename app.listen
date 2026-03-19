@@ -1,11 +1,16 @@
 const startServer = async () => {
   try {
+    // Connect to Redis first
+    redisClient.on('error', (err) => logger.error('Redis Error:', err));
     await redisClient.connect();
-    console.log('Connected to Redis');
-    
-    app.listen(PORT, () => console.log(`Ripper API at http://localhost:${PORT}`));
+    logger.info('Connected to Redis');
+
+    // Start Express only after DB is ready
+    app.listen(PORT, () => {
+      logger.info(`Ripper API running at http://localhost:${PORT}`);
+    });
   } catch (err) {
-    console.error('Failed to connect to Redis', err);
+    logger.error('Failed to start server:', err);
     process.exit(1);
   }
 };
