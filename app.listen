@@ -1,18 +1,3 @@
-const startServer = async () => {
-  try {
-    // Connect to Redis first
-    redisClient.on('error', (err) => logger.error('Redis Error:', err));
-    await redisClient.connect();
-    logger.info('Connected to Redis');
-
-    // Start Express only after DB is ready
-    app.listen(PORT, () => {
-      logger.info(`Ripper API running at http://localhost:${PORT}`);
-    });
-  } catch (err) {
-    logger.error('Failed to start server:', err);
-    process.exit(1);
-  }
-};
-
-startServer();
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server on port ${PORT}`));
+```
