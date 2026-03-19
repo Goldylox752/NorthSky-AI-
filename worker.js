@@ -1,5 +1,30 @@
 const axios = require('axios');
 const { HttpsProxyAgent } = require('https-proxy-agent');
+const transporter = require('./src/mailer');
+
+// ... your existing worker logic ...
+
+worker.on('completed', async (job) => {
+  // Only send email for "massive" rips (e.g., if it took a long time or is a specific type)
+  console.log(`Job ${job.id} finished. Sending notification...`);
+
+  try {
+    await transporter.sendMail({
+      from: '"Ripper Bot" <alerts@your-app.com>',
+      to: process.env.ADMIN_EMAIL, // Your email address
+      subject: `✅ Rip Complete: ${job.data.url.substring(0, 30)}...`,
+      html: `
+        <h3>Your Rip is Ready!</h3>
+        <p><strong>URL:</strong> ${job.data.url}</p>
+        <p><strong>Job ID:</strong> ${job.id}</p>
+        <a href="https://your-app.herokuapp.com">View on Dashboard</a>
+      `
+    });
+    console.log("Email sent successfully!");
+  } catch (err) {
+    console.error("Failed to send email notification:", err);
+  }
+});
 
 // List of proxies (format: http://user:pass@host:port)
 const proxies = [
