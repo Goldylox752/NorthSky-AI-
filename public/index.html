@@ -144,6 +144,29 @@
         btn.innerText = "RIP";
     }
 }
+const socket = io(); // Initialize connection
+
+async function executeRip() {
+    // ... existing UI code ...
+    const res = await fetch(`/rip?url=${encodeURIComponent(url)}`);
+    const { jobId } = await res.json();
+
+    // 1. Tell the server we want updates for THIS job
+    socket.emit('join-job', jobId);
+    output.innerText = `Waiting for Worker (Job #${jobId})...`;
+
+    // 2. Listen for the specific completion event
+    socket.once('job-completed', (data) => {
+        lastRipResult = data;
+        output.innerText = JSON.stringify(data, null, 2);
+        badge.innerText = "INSTANT SYNC COMPLETE";
+        badge.className = "bg-purple-500/20 text-purple-500 text-[10px] px-2 py-0.5 rounded font-bold";
+        
+        btn.disabled = false;
+        btn.innerText = "RIP";
+        updateDashboard();
+    });
+}
 
         <!-- Log Viewer -->
         <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
