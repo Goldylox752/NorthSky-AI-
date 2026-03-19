@@ -1,3 +1,27 @@
+async function updateDashboard() {
+    try {
+        // ... (Your existing stats and logs fetch) ...
+
+        // Fetch Recent Rips
+        const recentRes = await fetch('/dashboard/recent', { headers: { 'x-api-key': API_KEY } });
+        const recent = await recentRes.json();
+        
+        const listHtml = recent.length > 0 
+            ? recent.map(url => `
+                <li class="px-4 py-3 text-sm flex justify-between items-center group">
+                    <span class="truncate text-slate-400 max-w-md">${url}</span>
+                    <button onclick="document.getElementById('urlInput').value='${url}'; executeRip();" 
+                            class="text-blue-400 opacity-0 group-hover:opacity-100 text-xs font-bold transition">RE-RIP</button>
+                </li>`).join('')
+            : '<li class="p-4 text-slate-500 text-sm">No recent activity</li>';
+            
+        document.getElementById('recent-list').innerHTML = listHtml;
+    } catch (err) {
+        console.error("Dashboard Sync Failed", err);
+    }
+}
+
+
 app.get('/dashboard/logs', authenticate, async (req, res) => {
   try {
     const logPath = path.join(__dirname, 'audit.log');
