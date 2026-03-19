@@ -1,3 +1,26 @@
+
+const http = require('http');
+const { Server } = require('socket.io');
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "*" } // Allow your dashboard to connect
+});
+
+// Listen for connections
+io.on('connection', (socket) => {
+  console.log('Dashboard connected:', socket.id);
+  
+  // Join a "room" based on Job ID so users only get THEIR results
+  socket.on('join-job', (jobId) => {
+    socket.join(`job-${jobId}`);
+    console.log(`Socket ${socket.id} joined room job-${jobId}`);
+  });
+});
+
+// IMPORTANT: Export io so the worker or routes can use it
+module.exports = { app, server, io };
+
 app.get('/rip', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'URL required' });
