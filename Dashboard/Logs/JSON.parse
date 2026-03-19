@@ -1,3 +1,67 @@
+let memoryChart;
+const maxDataPoints = 20; // How many points to show on the graph
+const chartData = { labels: [], values: [] };
+
+function initChart() {
+    const ctx = document.getElementById('memoryChart').getContext('2d');
+    memoryChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartData.labels,
+            datasets: [{
+                label: 'Memory (MB)',
+                data: chartData.values,
+                borderColor: '#60a5fa', // blue-400
+                backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { display: false },
+                y: { 
+                    grid: { color: '#334155' },
+                    ticks: { color: '#94a3b8', font: { size: 10 } }
+                }
+            }
+        }
+    });
+}
+
+// Call this once on page load
+initChart();
+
+async function updateDashboard() {
+    try {
+        const statsRes = await fetch('/dashboard/stats', { headers: { 'x-api-key': API_KEY } });
+        const stats = await statsRes.json();
+
+        // Convert RSS memory to MB
+        const memMB = (stats.memory_usage / 1024 / 1024).toFixed(1);
+        const timeLabel = new Date().toLocaleTimeString();
+
+        // Update Chart Data
+        chartData.labels.push(timeLabel);
+        chartData.values.push(memMB);
+
+        if (chartData.labels.length > maxDataPoints) {
+            chartData.labels.shift();
+            chartData.values.shift();
+        }
+
+        memoryChart.update();
+        
+        // ... (rest of your existing updateDashboard code)
+    } catch (err) { console.error(err); }
+}
+
+
+
 async function updateDashboard() {
     try {
         // ... (Your existing stats and logs fetch) ...
