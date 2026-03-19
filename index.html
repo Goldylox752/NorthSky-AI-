@@ -18,6 +18,9 @@
     </style>
 </head>
 <body>
+  fetch("/api/fetch?url=https://example.com")
+  .then(res => res.json())
+  .then(data => console.log(data));
     <h1>Meta Ripper <span style="color: var(--accent)">Control Panel</span></h1>
     async function executeRip() {
     const url = document.getElementById('urlInput').value;
