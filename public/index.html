@@ -76,6 +76,10 @@
 gtag('event', 'rip_completed', {
   'event_category': 'engagement',
   'event_label': url // Tracks which URL was ripped
+});// Inside your catch block
+gtag('event', 'rip_failed', {
+  'event_category': 'error',
+  'message': err.message
 });
             RIP
         </button>
