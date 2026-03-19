@@ -1,4 +1,3 @@
-
 const http = require('http');
 const { Server } = require('socket.io');
 
@@ -48,7 +47,8 @@ app.get('/rip', async (req, res) => {
     return res.json({ source: 'fresh', ...ripResult });
   } catch (error) {
     res.status(500).json({ error: 'Rip failed', details: error.message });
-  }
+  }queueEvents.on('failed', ({ jobId, failedReason }) => {
+  io.to(`job-${jobId}`).emit('job-error', `All retries failed: ${failedReason}`);
 });
 
 // NEW: Add endpoint to fetch the list
