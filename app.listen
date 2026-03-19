@@ -1,0 +1,13 @@
+const startServer = async () => {
+  try {
+    await redisClient.connect();
+    console.log('Connected to Redis');
+    
+    app.listen(PORT, () => console.log(`Ripper API at http://localhost:${PORT}`));
+  } catch (err) {
+    console.error('Failed to connect to Redis', err);
+    process.exit(1);
+  }
+};
+
+startServer();
