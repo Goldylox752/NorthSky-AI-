@@ -103,7 +103,13 @@
                 `).join('');
             } catch (err) { console.error('Dashboard Error:', err); }
         }
-
+socket.on('job-progress', (status) => {
+    const logList = document.getElementById('status-logs');
+    // If status contains "Proxy", make it a different color
+    const colorClass = status.includes('Proxy') ? 'text-yellow-400' : 'text-blue-300';
+    logList.innerHTML += `<li class="${colorClass}">> ${status}</li>`;
+    logList.scrollTop = logList.scrollHeight;
+});
         setInterval(updateDashboard, 5000); // Auto-refresh every 5 seconds
         updateDashboard();
     </script>
