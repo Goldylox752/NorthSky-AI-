@@ -1,0 +1,7 @@
+const logs = data.trim().split('\n')
+  .map(line => {
+    try { return JSON.parse(line); } 
+    catch (e) { return null; }
+  })
+  .filter(Boolean) // Remove nulls
+  .reverse();
