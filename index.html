@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meta Ripper Dashboard</title>
+<meta name="google-site-verification" content="XnKRQY91vE59qHDD_9QKGmsGkYagYrsw1PR1WG4jwrk" />
+<style>
+  :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #38bdf8; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+  h1, h2 { color: var(--accent); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+  .card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #334155; text-align: center; }
+  .card h3 { margin: 0; font-size: 0.9rem; color: #94a3b8; }
+  .card p { font-size: 1.8rem; font-weight: bold; margin: 10px 0 0; color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; margin-bottom: 30px;}
+  th, td { padding: 15px; text-align: left; border-bottom: 1px solid #334155; }
+  th { background: #334155; font-size: 0.8rem; text-transform: uppercase; color: #94a3b8; }
+  .status-fresh { color: #4ade80; } 
+  .status-cache { color: #fbbf24; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:0.7rem; }
+  #jsonOutput { background:#020617; color:#38bdf8; padding:15px; border-radius:8px; white-space:pre-wrap; max-height:300px; overflow-y:auto; }
+  input, button { padding:10px; margin-top:10px; border-radius:6px; border:none; }
+  button { background:#38bdf8; color:#000; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<h1>Meta Ripper <span style="color: var(--accent)">Control Panel</span></h1>
+
+<!-- GRID STATS -->
+<div class="grid">
+  <div class="card"><h3>Total Cached</h3><p id="stat-cached">0</p></div>
+  <div class="card"><h3>System Uptime</h3><p id="stat-uptime">0h</p></div>
+  <div class="card"><h3>RAM Usage</h3><p id="stat-ram">0MB</p></div>
+</div>
+
+<!-- RIP FORM -->
+<h2>Rip a URL</h2>
+<input type="text" id="urlInput" placeholder="Enter URL to rip" style="width:60%;">
+<button id="ripBtn">RIP</button>
+<span id="sourceBadge" class="badge"></span>
+<pre id="jsonOutput"></pre>
+
+<!-- LOG TABLE -->
+<h2>Recent Activity</h2>
+<table id="log-table">
+  <thead>
+    <tr><th>Timestamp</th><th>Action</th><th>URL</th><th>Status</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<!-- SOCKET.IO -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const socket = io(); // connect to server
+const API_BASE = '/dashboard';
+
+// Execute a rip request
+async function executeRip() {
+    const url = document.getElementById('urlInput').value;
+    const btn = document.getElementById('ripBtn');
+    const output = document.getElementById('jsonOutput');
+    const badge = document.getElementById('sourceBadge');
+
+    if (!url) return alert("Enter a URL");
+    btn.disabled = true; btn.innerText = "RIPPING...";
+    try {
+        const res = await fetch(`/rip?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        output.innerText = JSON.stringify(data, null, 2);
+        badge.innerText = data.source || 'Result';
+        badge.className = data.source === 'cache' ? 'status-cache badge' : 'status-fresh badge';
+    } catch(e) { alert("Rip failed"); console.error(e); }
+    finally { btn.disabled = false; btn.innerText = "RIP"; updateDashboard(); }
+}
+
+document.getElementById('ripBtn').addEventListener('click', executeRip);
+
+// Update stats and logs
+async function updateDashboard() {
+    try {
+        const statsRes = await fetch(`${API_BASE}/stats`);
+        const stats = await statsRes.json();
+        document.getElementById('stat-cached').innerText = stats.total_cached_rips;
+        document.getElementById('stat-uptime').innerText = (stats.uptime/3600).toFixed(1)+'h';
+        document.getElementById('stat-ram').innerText = (stats.memory_usage/1024/1024).toFixed(0)+'MB';
+
+        const logsRes = await fetch(`${API_BASE}/logs`);
+        const logs = await logsRes.json();
+        const tbody = document.querySelector('#log-table tbody');
+        tbody.innerHTML = logs.map(log=>`
+            <tr>
+                <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
+                <td>${log.action}</td>
+                <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis;">${log.url}</td>
+                <td class="status-${log.level==='cache'?'cache':'fresh'}">${log.level}</td>
+            </tr>
+        `).join('');
+    } catch(e){ console.error(e); }
+}
+
+// Socket events for live updates
+socket.on('job-error', msg => console.error('Job Error:', msg));
+socket.on('job-progress', msg => console.log('Job Progress:', msg));
+
+setInterval(updateDashboard, 5000);
+updateDashboard();
+</script>
+
+</body>
+</html>
