@@ -1,187 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-2NZW6V24JP');
-    </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NorthSky AI Dashboard</title>
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ripper Engine Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <style>
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .animate-spin-slow { animation: spin 3s linear infinite; }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-    </style>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+    }
+
+    input, button {
+      padding: 12px;
+      width: 100%;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    button {
+      background: #38bdf8;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .card {
+      margin-top: 20px;
+      padding: 15px;
+      background: #1e293b;
+      border-radius: 10px;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+  </style>
 </head>
-<body class="bg-slate-950 text-slate-200 min-h-screen p-4 md:p-8 font-sans">
-    <div class="max-w-6xl mx-auto">
-        <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-            <div>
-                <h1 class="text-3xl font-black tracking-tight text-white flex items-center gap-2">
-                    <span class="text-blue-500 animate-pulse">⚡</span> RIPPER.IO
-                </h1>
-                <p class="text-slate-500 text-xs font-mono uppercase tracking-widest">Metadata Extraction Pipeline</p>
-            </div>
-            <div class="flex gap-3">
-                <button onclick="clearCache()" class="bg-slate-800 hover:bg-red-900/40 border border-slate-700 px-4 py-2 rounded-md text-xs font-bold transition-all">FLUSH REDIS</button>
-                <div class="bg-blue-600/10 border border-blue-500/50 px-4 py-2 rounded-md flex items-center gap-2">
-                    <div class="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
-                    <span class="text-xs font-bold text-blue-400">SYSTEM LIVE</span>
-                </div>
-            </div>
-        </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Left Column: Search & Progress -->
-            <div class="lg:col-span-2 space-y-6">
-                <!-- Search Card -->
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl">
-                    <div class="flex gap-2">
-                        <input type="text" id="urlInput" placeholder="Enter URL to rip metadata..." 
-                               class="flex-1 bg-black border border-slate-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors">
-                        <button onclick="executeRip()" id="ripBtn" class="bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-lg font-black text-sm transition-all shadow-lg shadow-blue-600/20">RIP</button>
-                    </div>
-                    
-                    <!-- Live Logs Sidebar -->
-                    <div class="mt-6">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-[10px] font-bold text-slate-500 uppercase">Worker Progress</span>
-                            <span id="jobIdLabel" class="text-[10px] font-mono text-blue-400"></span>
-                        </div>
-                        <div id="status-logs" class="bg-black/50 border border-slate-800 rounded-lg p-4 h-32 overflow-y-auto text-[11px] font-mono space-y-1 text-slate-400">
-                            <li>Waiting for input...</li>
-                        </div>
-                    </div>
-                </div>
+<body>
+  <div class="container">
+    <h1>🚀 NorthSky AI</h1>
+    <p>Paste a URL to extract metadata</p>
 
-                <!-- Result Card -->
-                <div id="resultPreview" class="hidden bg-slate-900 border border-blue-500/30 p-6 rounded-xl overflow-hidden relative">
-                    <div class="flex justify-between items-center mb-4">
-                        <span id="sourceBadge" class="text-[10px] font-black px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase"></span>
-                        <div class="flex gap-4">
-                            <button onclick="downloadJSON()" class="text-xs font-bold text-slate-400 hover:text-white transition">DOWNLOAD JSON</button>
-                            <button onclick="closePreview()" class="text-xs font-bold text-slate-600 hover:text-red-400 transition">CLOSE</button>
-                        </div>
-                    </div>
-                    <pre id="jsonOutput" class="text-[11px] leading-relaxed text-blue-200 font-mono overflow-x-auto"></pre>
-                </div>
-            </div>
+    <input id="url" placeholder="https://example.com" />
+    <button onclick="runRip()">Analyze</button>
 
-            <!-- Right Column: Stats & Recent -->
-            <div class="space-y-6">
-                <!-- Chart Card -->
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-                    <h3 class="text-xs font-bold text-slate-500 uppercase mb-4 tracking-tighter">Memory Allocation (RSS)</h3>
-                    <div class="h-32"><canvas id="memoryChart"></canvas></div>
-                </div>
-
-                <!-- Recent Rips -->
-                <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-                    <div class="bg-slate-800/50 px-4 py-3 border-b border-slate-800 text-[10px] font-bold uppercase text-slate-400">Recent Activity</div>
-                    <ul id="recent-list" class="divide-y divide-slate-800/50"></ul>
-                </div>
-            </div>
-        </div>
+    <div class="card">
+      <h3>Result</h3>
+      <pre id="output">Waiting...</pre>
     </div>
+  </div>
 
-    <script>
-        const API_KEY = 'your-secret-key-123';
-        const socket = io();
-        let lastRipResult = null;
-        let memoryChart;
-        const chartData = { labels: [], values: [] };
+  <script>
+    const API_BASE = "https://northsky-ai.onrender.com";
+    const API_KEY = "your-super-secret-key";
 
-        // 1. Google Analytics Helper
-        function logEvent(name, params) { gtag('event', name, params); }
+    async function runRip() {
+      const url = document.getElementById("url").value;
 
-        // 2. Execute Rip with Sockets
-        async function executeRip() {
-            const url = document.getElementById('urlInput').value;
-            if (!url) return;
-
-            logEvent('rip_started', { url });
-            document.getElementById('status-logs').innerHTML = '<li class="text-blue-400">> Initializing pipeline...</li>';
-            document.getElementById('ripBtn').disabled = true;
-
-            const res = await fetch(`/rip?url=${encodeURIComponent(url)}`);
-            const { jobId } = await res.json();
-            
-            document.getElementById('jobIdLabel').innerText = `ID: ${jobId}`;
-            socket.emit('join-job', jobId);
+      const res = await fetch(`${API_BASE}/rip?url=${encodeURIComponent(url)}`, {
+        headers: {
+          "x-api-key": API_KEY
         }
+      });
 
-        // 3. Socket Listeners
-        socket.on('job-progress', (status) => {
-            const logs = document.getElementById('status-logs');
-            logs.innerHTML += `<li>> ${status}</li>`;
-            logs.scrollTop = logs.scrollHeight;
-        });
-
-        socket.on('job-completed', (data) => {
-            lastRipResult = data;
-            document.getElementById('resultPreview').classList.remove('hidden');
-            document.getElementById('jsonOutput').innerText = JSON.stringify(data, null, 2);
-            document.getElementById('sourceBadge').innerText = data.source || 'COMPLETE';
-            document.getElementById('ripBtn').disabled = false;
-            logEvent('rip_success', { url: data.url });
-            updateDashboard();
-        });
-
-        socket.on('job-error', (err) => {
-            document.getElementById('status-logs').innerHTML += `<li class="text-red-500">! ${err}</li>`;
-            document.getElementById('ripBtn').disabled = false;
-            logEvent('rip_error', { message: err });
-        });
-
-        // 4. Stats & Monitoring
-        async function updateDashboard() {
-            const statsRes = await fetch('/dashboard/stats', { headers: { 'x-api-key': API_KEY } });
-            const stats = await statsRes.json();
-            
-            const memMB = (stats.memory_usage / 1024 / 1024).toFixed(1);
-            chartData.labels.push(new Date().toLocaleTimeString());
-            chartData.values.push(memMB);
-            if (chartData.labels.length > 15) { chartData.labels.shift(); chartData.values.shift(); }
-            memoryChart.update();
-
-            const recentRes = await fetch('/dashboard/recent', { headers: { 'x-api-key': API_KEY } });
-            const recent = await recentRes.json();
-            document.getElementById('recent-list').innerHTML = recent.map(r => `
-                <li class="px-4 py-3 text-[11px] truncate text-slate-500 hover:text-slate-300 transition-colors cursor-pointer" onclick="document.getElementById('urlInput').value='${r}'">${r}</li>
-            `).join('');
-        }
-
-        // 5. Chart Initialization
-        function initChart() {
-            const ctx = document.getElementById('memoryChart').getContext('2d');
-            memoryChart = new Chart(ctx, {
-                type: 'line',
-                data: { labels: chartData.labels, datasets: [{ data: chartData.values, borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.05)', pointRadius: 0 }] },
-                options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { display: false }, ticks: { color: '#475569', font: { size: 9 } } } } }
-            });
-        }
-
-        function downloadJSON() {
-            const blob = new Blob([JSON.stringify(lastRipResult, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `rip_${Date.now()}.json`;
-            a.click(); URL.revokeObjectURL(url);
-        }
-
-        function closePreview() { document.getElementById('resultPreview').classList.add('hidden'); }
-
-        window.onload = () => { initChart(); updateDashboard(); setInterval(updateDashboard, 5000); };
-    </script>
+      const data = await res.json();
+      document.getElementById("output").innerText = JSON.stringify(data, null, 2);
+    }
+  </script>
 </body>
 </html>
