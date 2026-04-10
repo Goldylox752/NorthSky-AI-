@@ -80,6 +80,20 @@ h1{
   background:#334155;
   margin:15px 0;
 }
+
+.lead-box{
+  background:#020617;
+  padding:15px;
+  border-radius:10px;
+  text-align:left;
+  font-size:0.9rem;
+}
+
+.flow{
+  text-align:left;
+  font-size:0.9rem;
+  margin-top:10px;
+}
 </style>
 </head>
 
@@ -88,28 +102,32 @@ h1{
 <div class="container">
 
 <!-- 🔥 HERO -->
-<h1>Automate Your Leads & Sales With AI — 24/7</h1>
+<h1>Turn Website Visitors Into Paying Customers — Automatically</h1>
 
 <p class="small">
-Most businesses lose customers because they respond too late.
+Even while you sleep. No coding. No missed leads.
 </p>
 
-<p class="small">
-We fix that — instantly.
-</p>
+<p class="urgent">⏳ Setup slots filling fast</p>
+
+<!-- 🎥 VIDEO -->
+<div class="card">
+<h3>🎥 Watch How It Works (30 sec)</h3>
+<p class="small">Add your Loom or TikTok demo here</p>
+</div>
 
 <!-- 💰 OFFER -->
 <div class="card">
 
-<h2>🔥 NorthSky AI Lead Automation Setup</h2>
+<h2>🔥 AI Lead Automation Setup</h2>
 
 <p class="small">
-We build your AI system so it captures, responds, and follows up with leads automatically — so you never miss a customer again.
+We build your AI system so it captures, responds, and follows up with leads automatically.
 </p>
 
 <div style="margin-top:15px;">
 <p>✔ Capture leads instantly</p>
-<p>✔ Auto-respond within seconds</p>
+<p>✔ Auto-respond in seconds</p>
 <p>✔ Follow up automatically</p>
 <p>✔ Close more customers</p>
 </div>
@@ -120,13 +138,50 @@ We build your AI system so it captures, responds, and follows up with leads auto
 
 <p class="badge">✅ One-time payment</p>
 <p class="badge">✅ Done-for-you setup</p>
-<p class="badge">✅ 30-day money-back guarantee</p>
+<p class="badge">✅ 30-day guarantee</p>
 
-<p class="urgent">⚠️ Only 10 setup spots available this week</p>
+<p class="urgent">⚠️ Only 10 spots available this week</p>
 
 <a href="https://buy.stripe.com/fZu7sE5uH4mwbc36762ZO0s">
   <button class="btn">🚀 Get My AI System – $99</button>
 </a>
+
+</div>
+
+<!-- 💎 VALUE STACK -->
+<div class="card">
+<h3>💰 What You Get</h3>
+
+<p>✔ Lead capture system ($300 value)</p>
+<p>✔ Auto-response AI ($200 value)</p>
+<p>✔ Follow-up system ($300 value)</p>
+<p>✔ Setup & install ($200 value)</p>
+
+<div class="divider"></div>
+
+<p class="small">Total value: $1,000+</p>
+<p class="price">$99 today</p>
+</div>
+
+<!-- 🧠 LIVE RESULT -->
+<div class="card">
+
+<h3>🧠 Example Lead Captured</h3>
+
+<div class="lead-box">
+Lead Captured ✅<br><br>
+Name: John Smith<br>
+Email: john@email.com<br>
+Interest: Travel SIM<br>
+Status: <span style="color:#22c55e;">Hot Lead 🔥</span>
+</div>
+
+<div class="flow">
+🟢 Lead captured<br>
+⚡ AI replied in 2 seconds<br>
+📩 Follow-up sent<br>
+💰 Customer booked
+</div>
 
 </div>
 
@@ -142,44 +197,23 @@ We build your AI system so it captures, responds, and follows up with leads auto
 <p class="badge">✅ Setup starts within 24 hours</p>
 </div>
 
-<!-- 🎯 WHO IT’S FOR -->
+<!-- 🎯 WHO -->
 <div class="card">
 <h3>🎯 Who This Is For</h3>
 
-<p>✔ Realtors & agents</p>
-<p>✔ Contractors & service businesses</p>
+<p>✔ Realtors</p>
+<p>✔ Contractors</p>
+<p>✔ Service businesses</p>
 <p>✔ Online stores</p>
-<p>✔ Anyone getting leads</p>
 </div>
 
 <!-- ⭐ SOCIAL PROOF -->
 <div class="card">
 <h3>⭐ Results</h3>
 
-<p class="small">“I stopped missing leads completely”</p>
 <p class="small">“Booked 3 clients in 2 days”</p>
-<p class="small">“Feels like I hired a sales assistant”</p>
-</div>
-
-<!-- 🧠 DEMO -->
-<div class="card">
-
-<h3>🧠 Live Demo</h3>
-<p class="small">Example of automation in action</p>
-
-<input type="text" id="urlInput" placeholder="Enter URL" style="width:100%;padding:10px;border-radius:6px;border:none;">
-<button onclick="rip()" class="btn">Run Demo</button>
-
-<pre id="output" style="
-background:#020617;
-padding:10px;
-border-radius:8px;
-margin-top:10px;
-font-size:0.8rem;
-max-height:200px;
-overflow:auto;
-"></pre>
-
+<p class="small">“Stopped missing leads completely”</p>
+<p class="small">“Like hiring a 24/7 sales assistant”</p>
 </div>
 
 <!-- 🚀 FINAL CTA -->
@@ -197,24 +231,6 @@ overflow:auto;
 </p>
 
 </div>
-
-<script>
-async function rip(){
-  const url = document.getElementById("urlInput").value;
-  if(!url) return alert("Enter URL");
-
-  const output = document.getElementById("output");
-  output.innerText = "Running...";
-
-  try{
-    const res = await fetch(`/rip?url=${encodeURIComponent(url)}`);
-    const data = await res.json();
-    output.innerText = JSON.stringify(data,null,2);
-  }catch(e){
-    output.innerText = "Error running demo";
-  }
-}
-</script>
 
 </body>
 </html>
