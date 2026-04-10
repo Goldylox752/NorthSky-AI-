@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Success</title>
+</head>
+<body style="background:#020617;color:white;text-align:center;font-family:Arial;">
+
+<h1>✅ Payment Successful</h1>
+<p>Setting up your API access...</p>
+
+<script>
+async function load() {
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get("session_id");
+
+  if (!sessionId) {
+    document.body.innerHTML = "Missing session ID";
+    return;
+  }
+
+  const res = await fetch('/api/get-key?session_id=' + sessionId);
+  const data = await res.json();
+
+  if (!data.api_key) {
+    document.body.innerHTML = "Error getting API key";
+    return;
+  }
+
+  // 🔥 SAVE KEY
+  localStorage.setItem("apiKey", data.api_key);
+
+  // redirect
+  setTimeout(() => {
+    window.location.href = "/dashboard.html";
+  }, 1500);
+}
+
+load();
+</script>
+
+</body>
+</html>
