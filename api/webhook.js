@@ -35,7 +35,6 @@ export default async function handler(req, res) {
     return res.status(400).send(err.message);
   }
 
-  // 💰 PAYMENT SUCCESS
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
 
@@ -46,10 +45,12 @@ export default async function handler(req, res) {
     const email =
       session.customer_details?.email || session.customer_email;
 
+    // ✅ FIXED INSERT
     const { error } = await supabase.from('api_keys').insert({
       stripe_session_id: session.id,
       email: email,
       api_key: apiKey,
+      user_id: session.id, // 🔥 REQUIRED
       plan: 'pro'
     });
 
