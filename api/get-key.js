@@ -8,14 +8,18 @@ const supabase = createClient(
 export default async function handler(req, res) {
   const { session_id } = req.query;
 
-  const { data } = await supabase
+  if (!session_id) {
+    return res.status(400).json({ error: "Missing session_id" });
+  }
+
+  const { data, error } = await supabase
     .from('api_keys')
     .select('api_key')
     .eq('stripe_session_id', session_id)
     .single();
 
-  if (!data) {
-    return res.status(404).json({ error: "Not found" });
+  if (error || !data) {
+    return res.status(404).json({ error: "Key not found" });
   }
 
   res.status(200).json({ api_key: data.api_key });
