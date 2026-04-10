@@ -1,100 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NorthSky Intelligence | Lead Intelligence Engine</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NorthSky Intelligence | Lead Intelligence Engine</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0b1220;
-      color: #e5e7eb;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0b1220;
+  color: #e5e7eb;
+}
 
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 28px;
-    }
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 28px;
+}
 
-    .hero {
-      text-align: center;
-      padding: 40px 10px 20px;
-    }
+.hero {
+  text-align: center;
+  padding: 40px 10px 20px;
+}
 
-    .hero h1 {
-      font-size: 34px;
-      color: #38bdf8;
-      margin-bottom: 8px;
-    }
+.hero h1 {
+  font-size: 34px;
+  color: #38bdf8;
+}
 
-    .hero p {
-      opacity: 0.85;
-      max-width: 700px;
-      margin: 0 auto;
-    }
+input, select, button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+}
 
-    input, select, button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 12px;
-      border-radius: 10px;
-      border: none;
-      font-size: 14px;
-    }
+button { cursor: pointer; font-weight: bold; }
 
-    button { cursor: pointer; font-weight: bold; }
+.primary { background: #38bdf8; color: #000; }
+.buy { background: #22c55e; color: #000; }
 
-    .primary { background: #38bdf8; color: #000; }
-    .buy { background: #22c55e; color: #000; margin-top: 10px; }
+#output {
+  margin-top: 20px;
+  padding: 15px;
+  background: #0f172a;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  min-height: 80px;
+}
 
-    #output {
-      margin-top: 20px;
-      padding: 15px;
-      background: #0f172a;
-      border-radius: 10px;
-      white-space: pre-wrap;
-      min-height: 80px;
-    }
+.card {
+  background: #111827;
+  padding: 16px;
+  margin-top: 15px;
+  border-radius: 12px;
+  display: none;
+}
 
-    .card {
-      background: #111827;
-      padding: 16px;
-      margin-top: 15px;
-      border-radius: 12px;
-      display: none;
-    }
+.score-bar {
+  height: 10px;
+  background: #1f2937;
+  border-radius: 10px;
+  overflow: hidden;
+}
 
-    img {
-      max-width: 100%;
-      border-radius: 10px;
-      margin-top: 10px;
-    }
+.score-bar-inner {
+  height: 100%;
+  width: 0%;
+  background: #38bdf8;
+}
 
-    .score-bar {
-      height: 10px;
-      background: #1f2937;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-top: 10px;
-    }
+/* 🔒 PAYWALL OVERLAY */
+.paywall {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
 
-    .score-bar-inner {
-      height: 100%;
-      width: 0%;
-      background: #38bdf8;
-    }
-  </style>
+.paywall-box {
+  background: #111827;
+  padding: 30px;
+  border-radius: 14px;
+  max-width: 420px;
+}
+
+.paywall-box h2 {
+  color: #38bdf8;
+}
+</style>
 </head>
+
 <body>
 
 <div class="container">
 
   <div class="hero">
     <h1>🌌 NorthSky Intelligence</h1>
-    <p>Turn any website into sales, SEO, and competitor intelligence in seconds.</p>
+    <p>Turn any website into sales, SEO, and competitor intelligence.</p>
   </div>
 
   <input id="lead" placeholder="Enter website URL or business name..." />
@@ -105,9 +115,9 @@
   </select>
 
   <button class="primary" onclick="runAI()">Generate Intelligence Report</button>
-  <button class="buy" onclick="buyAccess()">💳 Buy Access – Unlock Full Report</button>
+  <button class="buy" onclick="buyAccess()">💳 Unlock Full Access</button>
 
-  <div id="output">Ready.</div>
+  <div id="output">Locked or Ready...</div>
 
   <div id="previewCard" class="card">
     <h3>Preview</h3>
@@ -123,9 +133,54 @@
 
 </div>
 
+<!-- 🔒 PAYWALL -->
+<div id="paywall" class="paywall">
+  <div class="paywall-box">
+    <h2>🔒 Access Locked</h2>
+    <p>Unlock full intelligence reports to continue.</p>
+    <button class="buy" onclick="buyAccess()">Unlock for Access</button>
+  </div>
+</div>
+
 <script>
-const state = { loading: false };
 const STRIPE_LINK = "https://buy.stripe.com/fZueV63mz4mw2Fx2UU2ZO0w";
+let isPaid = localStorage.getItem("northsky_paid") === "true";
+
+/* ---------------- PAYWALL CONTROL ---------------- */
+
+function showPaywall() {
+  document.getElementById("paywall").style.display = "flex";
+}
+
+function hidePaywall() {
+  document.getElementById("paywall").style.display = "none";
+}
+
+/* ---------------- STRIPE ---------------- */
+
+function buyAccess() {
+  // mark intent (demo mode)
+  localStorage.setItem("northsky_paid", "true");
+  isPaid = true;
+
+  hidePaywall();
+
+  // redirect to Stripe checkout
+  window.location.href = STRIPE_LINK;
+}
+
+/* ---------------- INIT ---------------- */
+
+window.addEventListener("load", () => {
+  if (!isPaid) {
+    showPaywall();
+    document.getElementById("output").innerText = "🔒 Locked — please unlock access.";
+  } else {
+    document.getElementById("output").innerText = "✅ Access unlocked.";
+  }
+});
+
+/* ---------------- CORE LOGIC ---------------- */
 
 function isURL(str) {
   return /^https?:\/\//i.test((str || "").trim());
@@ -137,132 +192,62 @@ function getScreenshot(url) {
 
 function calculateScore(data = {}) {
   let score = 0;
-  const issues = [];
+  let issues = [];
 
   if (data.title) score += 2; else issues.push("Missing title");
   if (data.description) score += 2; else issues.push("Missing meta description");
   if (data.ogImage) score += 2; else issues.push("Missing social image");
-  if (Array.isArray(data.keywords) && data.keywords.length > 5) score += 2; else issues.push("Weak keywords");
-  if (data.content && data.content.length > 800) score += 2; else issues.push("Thin content");
+  if (data.content?.length > 800) score += 2; else issues.push("Thin content");
 
-  return { score, percent: (score / 10) * 100, issues };
+  return { score, percent: (score / 8) * 100, issues };
 }
 
-function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
-
-async function showLoading(output){
-  output.innerText = "Analyzing...";
-  await delay(300);
-  output.innerText += "\nScanning SEO...";
-  await delay(300);
-  output.innerText += "\nBuilding intelligence report...";
-}
-
-function buyAccess(){
-  localStorage.setItem("northsky_paid", "true");
-  window.location.href = STRIPE_LINK;
-}
-
-window.addEventListener("load", () => {
-  const paid = localStorage.getItem("northsky_paid");
-  const output = document.getElementById("output");
-  if (paid === "true" && output) {
-    output.innerText = "✅ Access unlocked — Full report enabled.";
-  }
-});
-
-async function buildInputData(input, output){
-  const inputData = (input || "").trim();
-  const mode = document.getElementById("mode")?.value || "sales";
-
-  const previewCard = document.getElementById("previewCard");
-  const ogImageEl = document.getElementById("ogImage");
-  const screenshotEl = document.getElementById("screenshot");
-
-  const scoreCard = document.getElementById("scoreCard");
-  const scoreBar = document.getElementById("scoreBar");
-  const scoreText = document.getElementById("scoreText");
-  const scoreReason = document.getElementById("scoreReason");
-
-  if(previewCard) previewCard.style.display="none";
-  if(scoreCard) scoreCard.style.display="none";
-
-  if(isURL(inputData)){
-    await showLoading(output);
-
-    try{
-      const res = await fetch("/api/scrape", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({url:inputData})
-      });
-
-      const data = await res.json().catch(()=>null);
-      if(!res.ok || !data){
-        output.innerText="Failed to analyze site";
-        return null;
-      }
-
-      const keywords = Array.isArray(data.keywords)?data.keywords:[];
-
-      if(previewCard) previewCard.style.display="block";
-      if(ogImageEl) ogImageEl.src=data.ogImage||"";
-      if(screenshotEl) screenshotEl.src=getScreenshot(inputData);
-
-      const scoreData=calculateScore(data);
-
-      if(scoreCard) scoreCard.style.display="block";
-      if(scoreBar) scoreBar.style.width=scoreData.percent+"%";
-      if(scoreText) scoreText.innerText=`Score: ${scoreData.score}/10`;
-      if(scoreReason) scoreReason.innerText=scoreData.issues.join(", ");
-
-      return `NorthSky Intelligence Report\n\nBusiness: ${data.title}\nDescription: ${data.description}\nKeywords: ${keywords.join(", ")}\nScore: ${scoreData.score}/10`;
-    }catch(e){
-      output.innerText="Error analyzing site";
-      return null;
-    }
-  }
-
-  return inputData;
-}
-
-async function runAI(){
-  if(state.loading) return;
-
-  const input=document.getElementById("lead")?.value||"";
-  const output=document.getElementById("output");
-
-  if(!input.trim()){
-    output.innerText="Enter input";
+async function runAI() {
+  if (!isPaid) {
+    showPaywall();
     return;
   }
 
-  state.loading=true;
+  const input = document.getElementById("lead").value;
+  const output = document.getElementById("output");
 
-  const inputData=await buildInputData(input,output);
-  if(!inputData){state.loading=false;return;}
-
-  output.innerText="Generating report...";
-
-  try{
-    const res=await fetch("/api/generate",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "x-api-key": localStorage.getItem("api_key") || ""
-      },
-      body:JSON.stringify({message:inputData})
-    });
-
-    const data=await res.json().catch(()=>null);
-
-    output.innerText=(res.ok && data?.reply)?data.reply:(data?.error||"Error generating response");
-
-  }catch(e){
-    output.innerText="Connection failed";
+  if (!input.trim()) {
+    output.innerText = "Enter input";
+    return;
   }
 
-  state.loading=false;
+  if (isURL(input)) {
+    output.innerText = "Analyzing...";
+
+    try {
+      const res = await fetch("/api/scrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: input })
+      });
+
+      const data = await res.json();
+
+      document.getElementById("previewCard").style.display = "block";
+      document.getElementById("ogImage").src = data.ogImage || "";
+      document.getElementById("screenshot").src = getScreenshot(input);
+
+      const score = calculateScore(data);
+
+      document.getElementById("scoreCard").style.display = "block";
+      document.getElementById("scoreBar").style.width = score.percent + "%";
+      document.getElementById("scoreText").innerText = `Score: ${score.score}/8`;
+      document.getElementById("scoreReason").innerText = score.issues.join(", ");
+
+      output.innerText =
+        `NorthSky Report\n\nTitle: ${data.title}\nDescription: ${data.description}`;
+
+    } catch (e) {
+      output.innerText = "Error analyzing site";
+    }
+  } else {
+    output.innerText = "Please enter a valid URL";
+  }
 }
 </script>
 
