@@ -10,14 +10,15 @@ const metascraper = require('metascraper')([
 
 const winston = require('winston');
 const rateLimit = require('express-rate-limit');
-const RedisStore = require('rate-limit-redis').default;
 
 const app = express();
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 3000;
 
+app.use(express.json());
+
 /* =========================
-   NORTHSKY AI LOGGER
+   LOGGER
 ========================= */
 const logger = winston.createLogger({
   level: 'info',
@@ -26,14 +27,9 @@ const logger = winston.createLogger({
     winston.format.json()
   ),
   transports: [
-    new winston.transports.File({ filename: 'northsky-ai.log' }),
     new winston.transports.Console()
   ]
 });
-
-module.exports = logger;
-
-app.use(express.json());
 
 /* =========================
    AUTH
@@ -43,25 +39,30 @@ const API_KEY = process.env.NORTHSKY_AI_API_KEY || 'your-super-secret-key';
 const authenticate = (req, res, next) => {
   const key = req.headers['x-api-key'];
   if (key && key === API_KEY) return next();
-
   return res.status(401).json({ error: 'Unauthorized' });
 };
 
 /* =========================
-   RATE LIMIT (SINGLE CLEAN VERSION)
+   RATE LIMIT
 ========================= */
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests' }
+  legacyHeaders: false
 });
 
 app.use('/rip', limiter);
 
 /* =========================
-   /RIP ENGINE (CORE)
+   HEALTH CHECK (IMPORTANT)
+========================= */
+app.get('/', (req, res) => {
+  res.send('🚀 NorthSky AI Engine is running');
+});
+
+/* =========================
+   RIP ENGINE
 ========================= */
 app.get('/rip', authenticate, async (req, res) => {
   const { url } = req.query;
@@ -75,26 +76,28 @@ app.get('/rip', authenticate, async (req, res) => {
       /youtube\.com|youtu\.be|tiktok\.com|twitter\.com|instagram\.com/.test(url);
 
     if (isVideo) {
-      const metadata = await ytDlpWrap.getVideoInfo(url);
+      try {
+        const metadata = await ytDlpWrap.getVideoInfo(url);
 
-      return res.json({
-        source: 'northsky-ai-yt-dlp',
-        title: metadata.title,
-        description: metadata.description,
-        thumbnail: metadata.thumbnail,
-        video_url: metadata.url,
-        duration: metadata.duration_string,
-        formats: metadata.formats?.map(f => ({
-          format_id: f.format_id,
-          ext: f.ext,
-          url: f.url
-        }))
-      });
+        return res.json({
+          source: 'northsky-ai-yt-dlp',
+          title: metadata.title,
+          description: metadata.description,
+          thumbnail: metadata.thumbnail,
+          duration: metadata.duration_string
+        });
+
+      } catch (err) {
+        return res.status(500).json({
+          error: 'Video extraction failed',
+          details: err.message
+        });
+      }
     }
 
     const { data: html } = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 NorthSky AI Engine'
+        'User-Agent': 'NorthSky AI Engine'
       }
     });
 
@@ -106,7 +109,7 @@ app.get('/rip', authenticate, async (req, res) => {
     });
 
   } catch (err) {
-    logger.error(err);
+    logger.error(err.message);
     return res.status(500).json({
       error: 'NorthSky AI failed',
       details: err.message
@@ -118,5 +121,5 @@ app.get('/rip', authenticate, async (req, res) => {
    START SERVER
 ========================= */
 app.listen(PORT, () => {
-  console.log(`NorthSky AI Engine running on http://localhost:${PORT}`);
+  console.log(`NorthSky AI running on port ${PORT}`);
 });
