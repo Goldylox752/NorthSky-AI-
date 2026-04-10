@@ -1,1 +1,11 @@
 https://northsky-ai.onrender.com/
+const statsRes = await fetch(`${API_BASE}/stats`, {
+  headers: {
+    'x-api-key': 'your-super-secret-key'
+  }
+});
+const logsRes = await fetch(`${API_BASE}/logs`, {
+  headers: {
+    'x-api-key': 'your-super-secret-key'
+  }
+});
