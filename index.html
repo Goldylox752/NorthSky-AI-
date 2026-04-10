@@ -45,21 +45,10 @@
       font-size: 14px;
     }
 
-    button {
-      cursor: pointer;
-      font-weight: bold;
-    }
+    button { cursor: pointer; font-weight: bold; }
 
-    .primary {
-      background: #38bdf8;
-      color: #000;
-    }
-
-    .buy {
-      background: #22c55e;
-      color: #000;
-      margin-top: 10px;
-    }
+    .primary { background: #38bdf8; color: #000; }
+    .buy { background: #22c55e; color: #000; margin-top: 10px; }
 
     #output {
       margin-top: 20px;
@@ -97,24 +86,6 @@
       width: 0%;
       background: #38bdf8;
     }
-
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-      margin-top: 25px;
-    }
-
-    .feature {
-      background: #111827;
-      padding: 14px;
-      border-radius: 12px;
-      font-size: 13px;
-    }
-
-    .feature b {
-      color: #38bdf8;
-    }
   </style>
 </head>
 <body>
@@ -134,7 +105,6 @@
   </select>
 
   <button class="primary" onclick="runAI()">Generate Intelligence Report</button>
-
   <button class="buy" onclick="buyAccess()">💳 Buy Access – Unlock Full Report</button>
 
   <div id="output">Ready.</div>
@@ -178,32 +148,30 @@ function calculateScore(data = {}) {
   return { score, percent: (score / 10) * 100, issues };
 }
 
-function delay(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
+function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-async function showLoading(output) {
+async function showLoading(output){
   output.innerText = "Analyzing...";
-  await delay(400);
+  await delay(300);
   output.innerText += "\nScanning SEO...";
-  await delay(400);
+  await delay(300);
   output.innerText += "\nBuilding intelligence report...";
 }
 
-function buyAccess() {
+function buyAccess(){
   localStorage.setItem("northsky_paid", "true");
   window.location.href = STRIPE_LINK;
 }
 
 window.addEventListener("load", () => {
   const paid = localStorage.getItem("northsky_paid");
-  if (paid === "true") {
-    const output = document.getElementById("output");
-    if (output) output.innerText = "✅ Access unlocked — Full report enabled.";
+  const output = document.getElementById("output");
+  if (paid === "true" && output) {
+    output.innerText = "✅ Access unlocked — Full report enabled.";
   }
 });
 
-async function buildInputData(input, output) {
+async function buildInputData(input, output){
   const inputData = (input || "").trim();
   const mode = document.getElementById("mode")?.value || "sales";
 
@@ -216,44 +184,41 @@ async function buildInputData(input, output) {
   const scoreText = document.getElementById("scoreText");
   const scoreReason = document.getElementById("scoreReason");
 
-  if (previewCard) previewCard.style.display = "none";
-  if (scoreCard) scoreCard.style.display = "none";
+  if(previewCard) previewCard.style.display="none";
+  if(scoreCard) scoreCard.style.display="none";
 
-  if (isURL(inputData)) {
+  if(isURL(inputData)){
     await showLoading(output);
 
-    try {
+    try{
       const res = await fetch("/api/scrape", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: inputData })
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({url:inputData})
       });
 
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok || !data) {
-        output.innerText = "Failed to analyze site";
+      const data = await res.json().catch(()=>null);
+      if(!res.ok || !data){
+        output.innerText="Failed to analyze site";
         return null;
       }
 
-      const keywords = Array.isArray(data.keywords) ? data.keywords : [];
+      const keywords = Array.isArray(data.keywords)?data.keywords:[];
 
-      if (previewCard) previewCard.style.display = "block";
-      if (ogImageEl) ogImageEl.src = data.ogImage || "";
-      if (screenshotEl) screenshotEl.src = getScreenshot(inputData);
+      if(previewCard) previewCard.style.display="block";
+      if(ogImageEl) ogImageEl.src=data.ogImage||"";
+      if(screenshotEl) screenshotEl.src=getScreenshot(inputData);
 
-      const scoreData = calculateScore(data);
+      const scoreData=calculateScore(data);
 
-      if (scoreCard) scoreCard.style.display = "block";
-      if (scoreBar) scoreBar.style.width = scoreData.percent + "%";
-      if (scoreText) scoreText.innerText = `Score: ${scoreData.score}/10`;
-      if (scoreReason) scoreReason.innerText = scoreData.issues.join(", ");
+      if(scoreCard) scoreCard.style.display="block";
+      if(scoreBar) scoreBar.style.width=scoreData.percent+"%";
+      if(scoreText) scoreText.innerText=`Score: ${scoreData.score}/10`;
+      if(scoreReason) scoreReason.innerText=scoreData.issues.join(", ");
 
       return `NorthSky Intelligence Report\n\nBusiness: ${data.title}\nDescription: ${data.description}\nKeywords: ${keywords.join(", ")}\nScore: ${scoreData.score}/10`;
-
-    } catch (err) {
-      console.error(err);
-      output.innerText = "Error analyzing site";
+    }catch(e){
+      output.innerText="Error analyzing site";
       return null;
     }
   }
@@ -261,47 +226,43 @@ async function buildInputData(input, output) {
   return inputData;
 }
 
-async function runAI() {
-  if (state.loading) return;
+async function runAI(){
+  if(state.loading) return;
 
-  const input = document.getElementById("lead")?.value || "";
-  const output = document.getElementById("output");
+  const input=document.getElementById("lead")?.value||"";
+  const output=document.getElementById("output");
 
-  if (!input.trim()) {
-    output.innerText = "Enter input";
+  if(!input.trim()){
+    output.innerText="Enter input";
     return;
   }
 
-  state.loading = true;
+  state.loading=true;
 
-  const inputData = await buildInputData(input, output);
+  const inputData=await buildInputData(input,output);
+  if(!inputData){state.loading=false;return;}
 
-  if (!inputData) {
-    state.loading = false;
-    return;
-  }
+  output.innerText="Generating report...";
 
-  output.innerText = "Generating report...";
-
-  try {
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: inputData })
+  try{
+    const res=await fetch("/api/generate",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "x-api-key": localStorage.getItem("api_key") || ""
+      },
+      body:JSON.stringify({message:inputData})
     });
 
-    const data = await res.json().catch(() => null);
+    const data=await res.json().catch(()=>null);
 
-    output.innerText = (res.ok && data?.reply)
-      ? data.reply
-      : (data?.error || "Error generating response");
+    output.innerText=(res.ok && data?.reply)?data.reply:(data?.error||"Error generating response");
 
-  } catch (err) {
-    console.error(err);
-    output.innerText = "Connection failed";
+  }catch(e){
+    output.innerText="Connection failed";
   }
 
-  state.loading = false;
+  state.loading=false;
 }
 </script>
 
