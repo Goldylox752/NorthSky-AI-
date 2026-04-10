@@ -1,259 +1,322 @@
-<script>
-// =============================
-// 🌌 NORTH SKY INTELLIGENCE - CORE STATE
-// =============================
-const state = {
-  loading: false
-};
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NorthSky Intelligence | Lead Intelligence Engine</title>
 
-// =============================
-// 🔍 VALID URL CHECK
-// =============================
-function isURL(str) {
-  return /^https?:\/\//i.test((str || "").trim());
-}
-
-// =============================
-// 📸 SCREENSHOT GENERATOR
-// =============================
-function getScreenshot(url) {
-  return `https://image.thum.io/get/fullpage/${encodeURIComponent(url)}`;
-}
-
-// =============================
-// 📊 SCORE ENGINE (HARDENED)
-// =============================
-function calculateScore(data = {}) {
-  let score = 0;
-  const issues = [];
-
-  if (data.title) score += 2;
-  else issues.push("Missing title");
-
-  if (data.description) score += 2;
-  else issues.push("Missing meta description");
-
-  if (data.ogImage) score += 2;
-  else issues.push("Missing social preview image");
-
-  if (Array.isArray(data.keywords) && data.keywords.length > 5) score += 2;
-  else issues.push("Weak keyword targeting");
-
-  if (data.content && data.content.length > 800) score += 2;
-  else issues.push("Thin content");
-
-  return {
-    score,
-    percent: (score / 10) * 100,
-    issues: issues.length ? issues : ["Strong overall setup"]
-  };
-}
-
-// =============================
-// 🎬 LOADING SEQUENCE
-// =============================
-async function showLoading(output) {
-  if (!output) return;
-
-  output.innerHTML = "🤖 Analyzing website...";
-
-  await delay(400);
-  output.innerHTML += "<br>🔍 Scanning SEO...";
-  await delay(400);
-  output.innerHTML += "<br>📊 Checking structure...";
-  await delay(400);
-  output.innerHTML += "<br>⚡ Generating insights...";
-}
-
-// =============================
-// 🧠 BUILD INPUT DATA + UI
-// =============================
-async function buildInputData(input, output) {
-  const inputData = (input || "").trim();
-  const mode = document.getElementById("mode")?.value || "sales";
-
-  const previewCard = document.getElementById("previewCard");
-  const ogImageEl = document.getElementById("ogImage");
-  const screenshotEl = document.getElementById("screenshot");
-
-  const scoreCard = document.getElementById("scoreCard");
-  const scoreBar = document.getElementById("scoreBar");
-  const scoreText = document.getElementById("scoreText");
-  const scoreReason = document.getElementById("scoreReason");
-
-  // =============================
-  // RESET UI SAFELY
-  // =============================
-  if (previewCard) previewCard.style.display = "none";
-  if (scoreCard) scoreCard.style.display = "none";
-
-  if (ogImageEl) {
-    ogImageEl.src = "";
-    ogImageEl.style.display = "none";
-  }
-
-  if (screenshotEl) {
-    screenshotEl.src = "";
-  }
-
-  // =============================
-  // 🌐 WEBSITE MODE
-  // =============================
-  if (isURL(inputData)) {
-    await showLoading(output);
-
-    try {
-      const res = await fetch("/api/scrape", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: inputData })
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok || !data) {
-        output.innerText = "⚠️ Failed to analyze site";
-        return null;
-      }
-
-      const keywords = Array.isArray(data.keywords) ? data.keywords : [];
-
-      // =============================
-      // 👁 PREVIEW UI
-      // =============================
-      if (previewCard) previewCard.style.display = "block";
-
-      if (data.ogImage && ogImageEl) {
-        ogImageEl.src = data.ogImage;
-        ogImageEl.style.display = "block";
-      }
-
-      if (screenshotEl) {
-        screenshotEl.src = getScreenshot(inputData);
-      }
-
-      // =============================
-      // 📊 SCORE UI
-      // =============================
-      const scoreData = calculateScore(data);
-
-      if (scoreCard) scoreCard.style.display = "block";
-      if (scoreBar) scoreBar.style.width = scoreData.percent + "%";
-      if (scoreText) scoreText.innerText = `Score: ${scoreData.score}/10`;
-      if (scoreReason) scoreReason.innerText = scoreData.issues.join(", ");
-
-      // =============================
-      // 🧠 PROMPT GENERATION
-      // =============================
-      if (mode === "sales") {
-        return `
-You are North Sky Intelligence, a world-class sales expert.
-
-Business:
-${data.title || data.ogTitle || "Unknown"}
-
-Description:
-${data.description || "No description"}
-
-Keywords:
-${keywords.join(", ") || "None"}
-
-Score:
-${scoreData.score}/10
-
-Task:
-1. Explain what the business does
-2. Identify target audience
-3. Write a high-converting sales message
-`;
-      }
-
-      if (mode === "competitor") {
-        return `
-You are North Sky Intelligence, a CRO and marketing strategist.
-
-Business:
-${data.title || data.ogTitle || "Unknown"}
-
-Description:
-${data.description || "No description"}
-
-Keywords:
-${keywords.join(", ") || "None"}
-
-Score:
-${scoreData.score}/10
-
-Task:
-1. Strengths
-2. Weaknesses
-3. How to outperform them
-4. Better positioning and offer strategy
-`;
-      }
-
-    } catch (err) {
-      console.error(err);
-      output.innerText = "⚠️ Error analyzing site";
-      return null;
-    }
-  }
-
-  return inputData;
-}
-
-// =============================
-// 🚀 MAIN RUN FUNCTION
-// =============================
-async function runAI() {
-  if (state.loading) return;
-
-  const input = document.getElementById("lead")?.value || "";
-  const output = document.getElementById("output");
-
-  if (!input.trim()) {
-    output.innerText = "⚠️ Enter input";
-    return;
-  }
-
-  state.loading = true;
-
-  const inputData = await buildInputData(input, output);
-
-  if (!inputData) {
-    state.loading = false;
-    return;
-  }
-
-  output.innerText = "Thinking... 🤖";
-
-  try {
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: inputData })
-    });
-
-    const data = await res.json().catch(() => null);
-
-    if (res.ok && data?.reply) {
-      output.innerText = data.reply;
-    } else {
-      output.innerText = data?.error || "⚠️ Error generating response";
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b1220;
+      color: #e5e7eb;
     }
 
-  } catch (err) {
-    console.error(err);
-    output.innerText = "⚠️ Connection failed";
-  }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px;
+    }
 
-  state.loading = false;
-}
+    .hero {
+      text-align: center;
+      padding: 40px 10px 20px;
+    }
 
-// =============================
-// ⏱ UTIL
-// =============================
-function delay(ms) {
-  return new Promise(res => setTimeout(res, ms));
-}
-</script>
+    .hero h1 {
+      font-size: 34px;
+      margin-bottom: 10px;
+      color: #38bdf8;
+    }
+
+    .hero p {
+      font-size: 16px;
+      opacity: 0.85;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .tagline {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #94a3b8;
+    }
+
+    .card {
+      background: #111827;
+      padding: 16px;
+      margin-top: 15px;
+      border-radius: 12px;
+      display: none;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      border-radius: 10px;
+      border: none;
+      font-size: 14px;
+    }
+
+    button {
+      background: #38bdf8;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    #output {
+      margin-top: 20px;
+      padding: 15px;
+      background: #0f172a;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      min-height: 80px;
+    }
+
+    img {
+      max-width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .score-bar {
+      height: 10px;
+      background: #1f2937;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .score-bar-inner {
+      height: 100%;
+      width: 0%;
+      background: #38bdf8;
+      transition: width 0.5s ease;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 25px;
+    }
+
+    .feature {
+      background: #111827;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    .feature b {
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- HERO -->
+    <div class="hero">
+      <h1>🌌 NorthSky Intelligence</h1>
+      <p>Turn any website into a complete sales, SEO, and competitor intelligence report in seconds.</p>
+      <div class="tagline">Lead Intelligence + SEO Analyzer + AI Sales Generator</div>
+    </div>
+
+    <!-- INPUT -->
+    <input id="lead" placeholder="Enter website URL or business name..." />
+
+    <select id="mode">
+      <option value="sales">Sales Intelligence Mode</option>
+      <option value="competitor">Competitor Breakdown Mode</option>
+    </select>
+
+    <button onclick="runAI()">Generate Intelligence Report</button>
+
+    <div id="output">Your AI report will appear here...</div>
+
+    <!-- PREVIEW -->
+    <div id="previewCard" class="card">
+      <h3>Website Preview</h3>
+      <img id="ogImage" />
+      <img id="screenshot" />
+    </div>
+
+    <!-- SCORE -->
+    <div id="scoreCard" class="card">
+      <h3 id="scoreText"></h3>
+      <div class="score-bar">
+        <div id="scoreBar" class="score-bar-inner"></div>
+      </div>
+      <p id="scoreReason"></p>
+    </div>
+
+    <!-- FEATURES -->
+    <div class="features">
+      <div class="feature"><b>⚡ Instant Analysis</b><br>Turn any URL into structured marketing insights</div>
+      <div class="feature"><b>📊 SEO Scoring</b><br>Automatically evaluates website strength</div>
+      <div class="feature"><b>🧠 AI Sales Engine</b><br>Generates high-converting messaging</div>
+      <div class="feature"><b>🕵️ Competitor Intel</b><br>Find weaknesses & outperform competitors</div>
+    </div>
+
+  </div>
+
+  <script>
+    const state = { loading: false };
+
+    function isURL(str) {
+      return /^https?:\/\//i.test((str || "").trim());
+    }
+
+    function getScreenshot(url) {
+      return `https://image.thum.io/get/fullpage/${encodeURIComponent(url)}`;
+    }
+
+    function calculateScore(data = {}) {
+      let score = 0;
+      const issues = [];
+
+      if (data.title) score += 2; else issues.push("Missing title");
+      if (data.description) score += 2; else issues.push("Missing meta description");
+      if (data.ogImage) score += 2; else issues.push("Missing social preview image");
+      if (Array.isArray(data.keywords) && data.keywords.length > 5) score += 2; else issues.push("Weak keyword targeting");
+      if (data.content && data.content.length > 800) score += 2; else issues.push("Thin content");
+
+      return { score, percent: (score / 10) * 100, issues };
+    }
+
+    function delay(ms) {
+      return new Promise(r => setTimeout(r, ms));
+    }
+
+    async function showLoading(output) {
+      output.innerText = "Analyzing website...";
+      await delay(400);
+      output.innerText += "\nScanning SEO...";
+      await delay(400);
+      output.innerText += "\nBuilding intelligence profile...";
+    }
+
+    async function buildInputData(input, output) {
+      const inputData = (input || "").trim();
+      const mode = document.getElementById("mode")?.value || "sales";
+
+      const previewCard = document.getElementById("previewCard");
+      const ogImageEl = document.getElementById("ogImage");
+      const screenshotEl = document.getElementById("screenshot");
+
+      const scoreCard = document.getElementById("scoreCard");
+      const scoreBar = document.getElementById("scoreBar");
+      const scoreText = document.getElementById("scoreText");
+      const scoreReason = document.getElementById("scoreReason");
+
+      if (previewCard) previewCard.style.display = "none";
+      if (scoreCard) scoreCard.style.display = "none";
+
+      if (ogImageEl) ogImageEl.src = "";
+      if (screenshotEl) screenshotEl.src = "";
+
+      if (isURL(inputData)) {
+        await showLoading(output);
+
+        try {
+          const res = await fetch("/api/scrape", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: inputData })
+          });
+
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok || !data) {
+            output.innerText = "Failed to analyze site";
+            return null;
+          }
+
+          const keywords = Array.isArray(data.keywords) ? data.keywords : [];
+
+          if (previewCard) previewCard.style.display = "block";
+
+          if (data.ogImage && ogImageEl) ogImageEl.src = data.ogImage;
+          if (screenshotEl) screenshotEl.src = getScreenshot(inputData);
+
+          const scoreData = calculateScore(data);
+
+          if (scoreCard) scoreCard.style.display = "block";
+          if (scoreBar) scoreBar.style.width = scoreData.percent + "%";
+          if (scoreText) scoreText.innerText = `Score: ${scoreData.score}/10`;
+          if (scoreReason) scoreReason.innerText = scoreData.issues.join(", ");
+
+          if (mode === "sales") {
+            return `Lead Intelligence Report\n\nBusiness: ${data.title}\nDescription: ${data.description}\nKeywords: ${keywords.join(", ")}\nScore: ${scoreData.score}/10`;
+          }
+
+          if (mode === "competitor") {
+            return `Competitor Intelligence Report\n\nBusiness: ${data.title}\nDescription: ${data.description}\nKeywords: ${keywords.join(", ")}\nScore: ${scoreData.score}/10`;
+          }
+
+        } catch (err) {
+          console.error(err);
+          output.innerText = "Error analyzing site";
+          return null;
+        }
+      }
+
+      return inputData;
+    }
+
+    async function runAI() {
+      if (state.loading) return;
+
+      const input = document.getElementById("lead")?.value || "";
+      const output = document.getElementById("output");
+
+      if (!input.trim()) {
+        output.innerText = "Enter a website or business";
+        return;
+      }
+
+      state.loading = true;
+
+      const inputData = await buildInputData(input, output);
+
+      if (!inputData) {
+        state.loading = false;
+        return;
+      }
+
+      output.innerText = "Generating intelligence report...";
+
+      try {
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: inputData })
+        });
+
+        const data = await res.json().catch(() => null);
+
+        output.innerText = (res.ok && data?.reply)
+          ? data.reply
+          : (data?.error || "Error generating report");
+
+      } catch (err) {
+        console.error(err);
+        output.innerText = "Connection failed";
+      }
+
+      state.loading = false;
+    }
+  </script>
+
+</body>
+</html>
