@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Success | NorthSky AI</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:linear-gradient(135deg,#020617,#0f172a);
+  color:#fff;
+  text-align:center;
+}
+
+.container{
+  max-width:600px;
+  margin:auto;
+  padding:40px 20px;
+}
+
+.card{
+  background:#1e293b;
+  padding:25px;
+  border-radius:14px;
+  margin-top:20px;
+  box-shadow:0 0 20px rgba(56,189,248,0.15);
+}
+
+h1{
+  color:#22c55e;
+}
+
+.key-box{
+  background:#020617;
+  padding:15px;
+  border-radius:10px;
+  word-break:break-all;
+  margin-top:15px;
+  font-size:14px;
+  border:1px solid #334155;
+}
+
+.btn{
+  margin-top:15px;
+  padding:14px;
+  width:100%;
+  border:none;
+  border-radius:10px;
+  background:#38bdf8;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.small{
+  opacity:0.8;
+  font-size:0.9rem;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>✅ Payment Successful</h1>
+<p class="small">Your AI system is ready</p>
+
+<div class="card">
+  <h3>🔑 Your API Key</h3>
+
+  <div id="apiKey" class="key-box">
+    Loading your key...
+  </div>
+
+  <button class="btn" onclick="copyKey()">Copy API Key</button>
+
+  <p class="small">Save this key — you’ll need it to use the API</p>
+</div>
+
+<div class="card">
+  <h3>🚀 What Happens Next</h3>
+
+  <p>1. Your API is now active</p>
+  <p>2. You can start sending requests immediately</p>
+  <p>3. We’ll contact you within 24h for setup</p>
+</div>
+
+</div>
+
+<script>
+async function loadKey() {
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get("session_id");
+
+  const box = document.getElementById("apiKey");
+
+  if (!sessionId) {
+    box.innerText = "Missing session ID";
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/get-key?session_id=' + sessionId);
+    const data = await res.json();
+
+    if (data.api_key) {
+      box.innerText = data.api_key;
+    } else {
+      box.innerText = "Key not found yet (refresh in 5 sec)";
+    }
+
+  } catch (err) {
+    box.innerText = "Error loading key";
+  }
+}
+
+function copyKey() {
+  const text = document.getElementById("apiKey").innerText;
+  navigator.clipboard.writeText(text);
+  alert("Copied!");
+}
+
+loadKey();
+</script>
+
+</body>
+</html>
