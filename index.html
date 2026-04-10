@@ -1,110 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NorthSky AI</title>
-
-<style>
-:root {
-  --bg:#020617;
-  --card:#1e293b;
-  --text:#f8fafc;
-  --accent:#38bdf8;
-}
-
-body{
-  margin:0;
-  font-family:Arial;
-  background:linear-gradient(135deg,#020617,#0f172a);
-  color:var(--text);
-  text-align:center;
-}
-
-.container{
-  max-width:650px;
-  margin:auto;
-  padding:25px 18px;
-}
-
-.card{
-  background:var(--card);
-  padding:22px;
-  border-radius:14px;
-  margin-top:20px;
-}
-
-.btn{
-  width:100%;
-  padding:16px;
-  margin-top:15px;
-  border:none;
-  border-radius:10px;
-  background:linear-gradient(135deg,#38bdf8,#0ea5e9);
-  font-weight:bold;
-  cursor:pointer;
-}
-
-textarea,input,select{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border-radius:8px;
-  border:none;
-}
-
-#output{
-  margin-top:15px;
-  background:#0f172a;
-  padding:12px;
-  border-radius:8px;
-  min-height:60px;
-}
-
-/* 🔥 PREVIEW STYLING */
-#previewCard{
-  display:none;
-  margin-top:15px;
-  text-align:left;
-}
-
-#previewCard img{
-  width:100%;
-  border-radius:10px;
-  margin-top:10px;
-  box-shadow:0 0 20px rgba(56,189,248,0.25);
-}
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-<h1>AI Lead & Competitor Analyzer</h1>
-
-<div class="card">
-  <select id="mode">
-    <option value="sales">💰 Sales Reply</option>
-    <option value="competitor">📊 Competitor Analysis</option>
-  </select>
-
-  <textarea id="lead" placeholder="Paste a message OR website URL..."></textarea>
-
-  <button onclick="runAI()" class="btn">Run AI</button>
-
-  <!-- 🔎 PREVIEW -->
-  <div id="previewCard">
-    <p>🔎 Website Preview</p>
-    <img id="ogImage" style="display:none;" />
-    <img id="screenshot" />
-  </div>
-
-  <div id="output"></div>
-</div>
-
-</div>
-
 <script>
 // 🔍 URL CHECK
 function isURL(str) {
@@ -147,19 +40,20 @@ async function buildInputData(input, output) {
         return null;
       }
 
+      // ✅ SAFE KEYWORDS
+      const keywords = data.keywords || [];
+
       // 🔥 SHOW PREVIEW
       previewCard.style.display = "block";
 
-      // OG IMAGE
       if (data.ogImage) {
         ogImageEl.src = data.ogImage;
         ogImageEl.style.display = "block";
       }
 
-      // SCREENSHOT (always show)
       screenshotEl.src = getScreenshot(input);
 
-      // 🧠 MODES
+      // 🧠 SALES MODE
       if (mode === "sales") {
         inputData = `
 You are an AI sales expert.
@@ -167,7 +61,11 @@ You are an AI sales expert.
 Business:
 ${data.title || data.ogTitle}
 
+Description:
 ${data.description}
+
+Keywords:
+${keywords.join(", ")}
 
 Task:
 1. What they do
@@ -176,14 +74,19 @@ Task:
 `;
       }
 
-      if (mode === "competitor") {
+      // 🧠 COMPETITOR MODE
+      else if (mode === "competitor") {
         inputData = `
 You are a marketing expert.
 
 Business:
 ${data.title || data.ogTitle}
 
+Description:
 ${data.description}
+
+Keywords:
+${keywords.join(", ")}
 
 Task:
 1. Strengths
@@ -232,6 +135,3 @@ async function runAI() {
   }
 }
 </script>
-
-</body>
-</html>
