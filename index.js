@@ -28,18 +28,84 @@ app.use("/api/", (req, res, next) => {
   next();
 });
 
-/* ================= UTIL ================= */
-function timeout(ms) {
-  return new Promise((resolve) => setTimeout(() => resolve(null), ms));
+/* ================= USER AGENTS ================= */
+const USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)",
+  "Mozilla/5.0 (Linux; Android 12)",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+];
+
+function getHeaders() {
+  return {
+    "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+    "Accept-Language": "en-US,en;q=0.9"
+  };
 }
 
+/* ================= RETRY ================= */
+async function retry(fn, retries = 3, delay = 800) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fn();
+      if (res) return res;
+    } catch {}
+    await new Promise(r => setTimeout(r, delay * (i + 1)));
+  }
+  return null;
+}
+
+/* ================= SAFE RACE ================= */
 async function raceRequests(promises, ms = 10000) {
-  return Promise.race([
-    Promise.any(promises),
-    timeout(ms)
-  ]);
+  return new Promise((resolve) => {
+    let done = false;
+
+    promises.forEach(p => {
+      p.then(res => {
+        if (!done && res) {
+          done = true;
+          resolve(res);
+        }
+      }).catch(() => {});
+    });
+
+    setTimeout(() => {
+      if (!done) resolve(null);
+    }, ms);
+  });
 }
 
+/* ================= QUEUE ================= */
+const queue = [];
+let active = false;
+
+async function processQueue() {
+  if (active) return;
+  active = true;
+
+  while (queue.length) {
+    const job = queue.shift();
+    try {
+      await job();
+    } catch (e) {
+      console.error("Queue error:", e.message);
+    }
+  }
+
+  active = false;
+}
+
+function addToQueue(fn) {
+  return new Promise(resolve => {
+    queue.push(async () => {
+      const result = await fn();
+      resolve(result);
+    });
+    processQueue();
+  });
+}
+
+/* ================= PLATFORM DETECT ================= */
 function detectPlatform(url) {
   if (/tiktok\.com/.test(url)) return "tiktok";
   if (/instagram\.com/.test(url)) return "instagram";
@@ -47,14 +113,14 @@ function detectPlatform(url) {
   return "web";
 }
 
-/* ================= TIKTOK (MULTI API) ================= */
-
+/* ================= TIKTOK ================= */
 async function tiktokAPI1(url) {
-  try {
+  return retry(async () => {
     const { data } = await axios.get(
       `https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`,
-      { timeout: 8000 }
+      { timeout: 8000, headers: getHeaders() }
     );
+
     if (data?.data) {
       return {
         title: data.data.title,
@@ -64,16 +130,17 @@ async function tiktokAPI1(url) {
         author: data.data.author?.nickname,
       };
     }
-  } catch {}
-  return null;
+    return null;
+  });
 }
 
 async function tiktokAPI2(url) {
-  try {
+  return retry(async () => {
     const { data } = await axios.get(
       `https://tikdown.org/api/download?url=${encodeURIComponent(url)}`,
-      { timeout: 8000 }
+      { timeout: 8000, headers: getHeaders() }
     );
+
     if (data?.video) {
       return {
         title: "TikTok Video",
@@ -81,29 +148,23 @@ async function tiktokAPI2(url) {
         download: data.video,
       };
     }
-  } catch {}
-  return null;
+    return null;
+  });
 }
 
 async function handleTikTok(url) {
-  const result = await raceRequests([
+  return raceRequests([
     tiktokAPI1(url),
     tiktokAPI2(url),
   ]);
-
-  return result || {
-    title: "TikTok Video",
-    platform: "tiktok",
-  };
 }
 
 /* ================= INSTAGRAM ================= */
-
 async function handleInstagram(url) {
-  try {
+  return retry(async () => {
     const { data } = await axios.get(
       `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-      { timeout: 8000 }
+      { timeout: 8000, headers: getHeaders() }
     );
 
     const img = data.match(/"og:image" content="(.*?)"/)?.[1];
@@ -112,18 +173,15 @@ async function handleInstagram(url) {
       title: "Instagram Post",
       image: img || null,
     };
-  } catch {
-    return { title: "Instagram Content" };
-  }
+  });
 }
 
 /* ================= YOUTUBE ================= */
-
 async function handleYouTube(url) {
-  try {
+  return retry(async () => {
     const { data } = await axios.get(
       `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
-      { timeout: 8000 }
+      { timeout: 8000, headers: getHeaders() }
     );
 
     return {
@@ -131,31 +189,33 @@ async function handleYouTube(url) {
       image: data.thumbnail_url,
       author: data.author_name,
     };
-  } catch {
-    return { title: "YouTube Video" };
-  }
+  });
 }
 
-/* ================= WEB SCRAPER ================= */
-
+/* ================= WEB ================= */
 async function fetchDirect(url) {
   try {
     const { data } = await axios.get(url, {
-      headers: { "User-Agent": "Mozilla/5.0" },
+      headers: getHeaders(),
       timeout: 7000,
     });
     return data;
-  } catch {}
-  return null;
+  } catch {
+    return null;
+  }
 }
 
 async function fetchProxy(url) {
   try {
     const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    const { data } = await axios.get(proxy, { timeout: 9000 });
+    const { data } = await axios.get(proxy, {
+      timeout: 9000,
+      headers: getHeaders()
+    });
     return data;
-  } catch {}
-  return null;
+  } catch {
+    return null;
+  }
 }
 
 async function fetchSmart(url) {
@@ -168,33 +228,40 @@ async function fetchSmart(url) {
 /* ================= ROUTES ================= */
 
 app.get("/", (req, res) => {
-  res.send("🚀 NorthSky COBALT API");
+  res.send("🚀 NorthSky COBALT v2 LIVE");
 });
 
 app.get("/api/rip", async (req, res) => {
-  const kill = setTimeout(() => {
-    res.json({ success: false, error: "timeout" });
-  }, 12000);
+  let responded = false;
+
+  function send(data) {
+    if (!responded) {
+      responded = true;
+      res.json(data);
+    }
+  }
 
   try {
     let { url } = req.query;
-    if (!url) return res.json({ success: false });
+    if (!url) return send({ success: false });
 
     if (!url.startsWith("http")) url = "https://" + url;
 
+    console.log("Incoming:", url);
+
     const cached = cache[url];
     if (cached && Date.now() - cached.t < CACHE_TIME) {
-      clearTimeout(kill);
-      return res.json(cached.d);
+      return send(cached.d);
     }
 
     const platform = detectPlatform(url);
 
-    let data = null;
-
-    if (platform === "tiktok") data = await handleTikTok(url);
-    if (platform === "instagram") data = await handleInstagram(url);
-    if (platform === "youtube") data = await handleYouTube(url);
+    let data = await addToQueue(async () => {
+      if (platform === "tiktok") return handleTikTok(url);
+      if (platform === "instagram") return handleInstagram(url);
+      if (platform === "youtube") return handleYouTube(url);
+      return null;
+    });
 
     if (data) {
       const resData = {
@@ -206,12 +273,10 @@ app.get("/api/rip", async (req, res) => {
       };
 
       cache[url] = { d: resData, t: Date.now() };
-
-      clearTimeout(kill);
-      return res.json(resData);
+      return send(resData);
     }
 
-    /* WEB */
+    /* WEB FALLBACK */
     const html = await fetchSmart(url);
 
     let meta = { title: "Unknown" };
@@ -235,16 +300,17 @@ app.get("/api/rip", async (req, res) => {
 
     cache[url] = { d: resData, t: Date.now() };
 
-    clearTimeout(kill);
-    res.json(resData);
+    send(resData);
 
   } catch (e) {
-    clearTimeout(kill);
-    res.json({ success: false });
+    console.error("ERROR:", e.message);
+    send({ success: false });
   }
 });
 
 /* ================= START ================= */
-app.listen(process.env.PORT || 3000, () => {
-  console.log("🚀 COBALT SERVER LIVE");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("🚀 COBALT v2 RUNNING on " + PORT);
 });
