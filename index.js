@@ -1,108 +1,135 @@
+const express = require('express');
+const axios = require('axios');
+const cors = require('cors');
+const metascraper = require('metascraper')([
+  require('metascraper-title')(),
+  require('metascraper-description')(),
+  require('metascraper-image')()
+]);
+
+const app = express();
+app.use(cors());
+
 /* =========================
-   AI INTELLIGENCE LAYER
+   OPENAI
 ========================= */
-let analysis = null;
-let confidence = "low";
+let openai = null;
 
-if (openai && (metadata.title || metadata.description)) {
-  try {
-    const ai = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: "You are a marketing intelligence engine that ONLY returns valid JSON."
-        },
-        {
-          role: "user",
-          content: `
-Analyze this content:
-
-Title: ${metadata.title || "N/A"}
-Description: ${metadata.description || "N/A"}
-Platform: ${platform}
-
-Return STRICT JSON:
-
-{
-  "summary": "short summary",
-  "hook": "why it grabs attention",
-  "target_audience": "who it's for",
-  "monetization_angle": "how to make money from this",
-  "viral_score": number (1-10)
-}
-          `
-        }
-      ]
-    });
-
-    const raw = ai.choices?.[0]?.message?.content;
-
-    try {
-      analysis = raw ? JSON.parse(raw) : null;
-      if (analysis?.viral_score) confidence = "high";
-    } catch (parseErr) {
-      logger.warn("JSON parse failed");
-      analysis = { raw };
-    }
-
-  } catch (e) {
-    logger.warn("AI failed: " + e.message);
-  }
+try {
+  const OpenAI = require("openai");
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+} catch {
+  console.log("No OpenAI");
 }
 
 /* =========================
-   YOUTUBE HANDLER
+   HELPERS
 ========================= */
+function detectPlatform(url) {
+  if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube";
+  return "website";
+}
+
 function handleYouTube(url) {
   const idMatch = url.match(/(?:v=|youtu\.be\/)([^&]+)/);
   const videoId = idMatch ? idMatch[1] : null;
 
-  if (!videoId) {
-    return {
-      title: "YouTube Video",
-      description: "Invalid or unsupported YouTube URL",
-      image: null,
-      thumbnail: null,
-      embed: null,
-      platform: "youtube",
-      url
-    };
-  }
-
   return {
     title: "YouTube Video",
-    description: "Potential viral video content",
-    image: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-    thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-    embed: `https://www.youtube.com/embed/${videoId}`,
+    description: "Video content",
+    image: videoId
+      ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+      : null,
     platform: "youtube",
-    videoId,
     url
   };
 }
 
 /* =========================
-   METADATA FALLBACK
+   ROUTE
 ========================= */
-metadata.title = metadata.title || "Untitled Page";
-metadata.description = metadata.description || "No description found";
+app.get('/rip', async (req, res) => {
+  const { url } = req.query;
+
+  if (!url) {
+    return res.status(400).json({ error: 'URL required' });
+  }
+
+  try {
+    let metadata = {};
+    let platform = detectPlatform(url);
+    let source = '';
+
+    /* PLATFORM */
+    if (platform === "youtube") {
+      metadata = handleYouTube(url);
+      source = "youtube";
+    } else {
+      const { data: html } = await axios.get(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      });
+
+      metadata = await metascraper({ html, url });
+      source = "website";
+    }
+
+    /* FALLBACK */
+    metadata.title = metadata.title || "Untitled Page";
+    metadata.description = metadata.description || "No description";
+
+    /* SCREENSHOT */
+    const screenshot = `https://image.thum.io/get/fullpage/${encodeURIComponent(url)}`;
+
+    /* AI */
+    let analysis = null;
+
+    if (openai) {
+      try {
+        const ai = await openai.chat.completions.create({
+          model: "gpt-4.1-mini",
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "user",
+              content: `Analyze this:
+Title: ${metadata.title}
+Description: ${metadata.description}
+
+Return JSON with summary and viral_score`
+            }
+          ]
+        });
+
+        analysis = JSON.parse(ai.choices[0].message.content);
+      } catch (e) {
+        console.log("AI failed");
+      }
+    }
+
+    return res.json({
+      success: true,
+      source,
+      platform,
+      metadata,
+      screenshot,
+      analysis
+    });
+
+  } catch (err) {
+    console.error(err.message);
+
+    return res.status(500).json({
+      error: 'Server error',
+      details: err.message
+    });
+  }
+});
 
 /* =========================
-   SCREENSHOT
+   START
 ========================= */
-const screenshot = `https://image.thum.io/get/fullpage/${encodeURIComponent(url)}`;
-
-/* =========================
-   FINAL RESPONSE
-========================= */
-return res.json({
-  success: true,
-  source,
-  platform,
-  screenshot,
-  metadata,
-  analysis,
-  confidence
+app.listen(3000, () => {
+  console.log("Running on 3000");
 });
