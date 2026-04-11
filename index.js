@@ -4,7 +4,7 @@ const axios = require("axios");
 const cors = require("cors");
 const chromium = require("@sparticuz/chromium");
 const puppeteer = require("puppeteer-core");
-const PQueue = require("p-queue");
+const PQueue = require("p-queue").default; // ✅ FIXED
 
 const metascraper = require("metascraper")([
   require("metascraper-title")(),
@@ -50,7 +50,9 @@ function checkUsage(req, res, next) {
 app.use("/api/", checkUsage);
 
 /* ================= QUEUE ================= */
-const queue = new PQueue({ concurrency: 2 });
+const queue = new PQueue({
+  concurrency: 2,
+});
 
 /* ================= BROWSER ================= */
 let browser;
@@ -79,8 +81,8 @@ async function fetchWithBrowser(url) {
   let page;
 
   try {
-    const browser = await getBrowser();
-    page = await browser.newPage();
+    const browserInstance = await getBrowser();
+    page = await browserInstance.newPage();
 
     await page.setUserAgent("Mozilla/5.0");
 
@@ -117,10 +119,10 @@ async function fetchHTML(url) {
 
   // 2️⃣ Proxy fallback
   try {
-    const proxyURL = `https://api.allorigins.win/raw?url=${encodeURIComponent(
-      url
-    )}`;
-    const { data } = await axios.get(proxyURL, { timeout: 12000 });
+    const proxyURL = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const { data } = await axios.get(proxyURL, {
+      timeout: 12000,
+    });
 
     console.log("🟡 Proxy worked");
     return data;
@@ -193,14 +195,13 @@ app.get("/api/rip", async (req, res) => {
         };
 
         scraped = true;
+        console.log("✅ Scraped");
       } catch {
         console.log("⚠️ metascraper failed");
       }
     }
 
-    const screenshot = `https://image.thum.io/get/fullpage/${encodeURIComponent(
-      url
-    )}`;
+    const screenshot = `https://image.thum.io/get/fullpage/${encodeURIComponent(url)}`;
 
     const responseData = {
       success: true,
@@ -214,11 +215,11 @@ app.get("/api/rip", async (req, res) => {
       timestamp: Date.now(),
     };
 
-    res.json(responseData);
+    return res.json(responseData);
   } catch (err) {
     console.log("❌ ERROR:", err.message);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: "Server failure",
     });
