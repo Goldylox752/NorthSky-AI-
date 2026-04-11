@@ -1,7 +1,6 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
-const { HttpsProxyAgent } = require('https-proxy-agent');
 
 const metascraper = require('metascraper')([
   require('metascraper-title')(),
@@ -17,7 +16,7 @@ app.set('trust proxy', true);
 
 /* ================= CACHE ================= */
 const cache = {};
-const CACHE_TIME = 1000 * 60 * 30; // 30 minutes
+const CACHE_TIME = 1000 * 60 * 30; // 30 min
 
 /* ================= USAGE LIMIT ================= */
 const usage = {};
@@ -30,7 +29,8 @@ function checkUsage(req, res, next) {
   if (usage[ip] > 50) {
     return res.status(403).json({
       success: false,
-      error: "Upgrade required"
+      error: "Upgrade required",
+      upgrade: true
     });
   }
 
@@ -51,19 +51,10 @@ try {
   console.log("❌ No OpenAI key");
 }
 
-/* ================= PROXIES ================= */
-const proxies = [
-  "http://103.149.162.194:80",
-  "http://51.158.68.68:8811",
-  "http://163.172.33.137:80"
-];
-
-function getProxy() {
-  return proxies[Math.floor(Math.random() * proxies.length)];
-}
-
-/* ================= FETCH HTML ================= */
+/* ================= FETCH HTML (FIXED) ================= */
 async function fetchHTML(url) {
+
+  // 1️⃣ Normal request
   try {
     const { data } = await axios.get(url, {
       headers: {
@@ -72,27 +63,27 @@ async function fetchHTML(url) {
       },
       timeout: 10000
     });
+
+    console.log("✅ Normal scrape worked");
     return data;
-  } catch {}
 
+  } catch (e) {
+    console.log("❌ Normal failed");
+  }
+
+  // 2️⃣ Reliable free proxy (BEST fallback)
   try {
-    const agent = new HttpsProxyAgent(getProxy());
+    const proxyURL = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
 
-    const { data } = await axios.get(url, {
-      httpsAgent: agent,
-      headers: { "User-Agent": "Mozilla/5.0" },
+    const { data } = await axios.get(proxyURL, {
       timeout: 15000
     });
 
+    console.log("✅ Proxy fallback worked");
     return data;
-  } catch {}
 
-  if (process.env.SCRAPER_API_KEY) {
-    try {
-      const proxyURL = `https://api.zenrows.com/v1/?apikey=${process.env.SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
-      const { data } = await axios.get(proxyURL);
-      return data;
-    } catch {}
+  } catch (e) {
+    console.log("❌ Proxy fallback failed");
   }
 
   return null;
@@ -100,13 +91,15 @@ async function fetchHTML(url) {
 
 /* ================= AI ================= */
 async function runAI(metadata, url) {
+
+  // 🔥 fallback if no OpenAI
   if (!openai) {
     return {
-      summary: "Basic content detected",
-      hook: "Potential engaging content",
-      target_audience: "General audience",
-      monetization_angle: "Ads or products",
-      viral_score: Math.floor(Math.random() * 10) + 1
+      summary: `Content from ${url}`,
+      hook: "Likely optimized for engagement",
+      target_audience: "Online users",
+      monetization_angle: "Ads / affiliate / product",
+      viral_score: Math.floor(Math.random() * 5) + 5
     };
   }
 
@@ -142,13 +135,15 @@ Return JSON:
 
     return JSON.parse(ai.choices[0].message.content);
 
-  } catch {
+  } catch (e) {
+    console.log("⚠️ AI failed:", e.message);
+
     return {
       summary: "AI fallback analysis",
-      hook: "Likely engaging topic",
-      target_audience: "Online users",
+      hook: "Engaging content pattern",
+      target_audience: "Internet users",
       monetization_angle: "Ads / affiliate",
-      viral_score: Math.floor(Math.random() * 10) + 1
+      viral_score: Math.floor(Math.random() * 5) + 5
     };
   }
 }
@@ -168,15 +163,13 @@ app.get('/api/rip', async (req, res) => {
     url = "https://" + url;
   }
 
-  /* ⚡ CACHE CHECK FIRST */
+  console.log("🔍 URL:", url);
+
+  /* ⚡ CACHE */
   const cached = cache[url];
   if (cached && Date.now() - cached.timestamp < CACHE_TIME) {
     console.log("⚡ Cache hit");
-
-    return res.json({
-      ...cached.data,
-      cached: true
-    });
+    return res.json({ ...cached.data, cached: true });
   }
 
   try {
@@ -184,7 +177,7 @@ app.get('/api/rip', async (req, res) => {
 
     let metadata = {
       title: "Unknown Page",
-      description: "No description",
+      description: "No description available",
       image: null
     };
 
@@ -201,7 +194,13 @@ app.get('/api/rip', async (req, res) => {
         };
 
         scraped = true;
-      } catch {}
+        console.log("✅ Scrape success");
+
+      } catch {
+        console.log("⚠️ metascraper failed");
+      }
+    } else {
+      console.log("❌ No HTML fetched");
     }
 
     const screenshot = `https://image.thum.io/get/fullpage/${encodeURIComponent(url)}`;
@@ -216,7 +215,7 @@ app.get('/api/rip', async (req, res) => {
       analysis
     };
 
-    /* 💾 SAVE CACHE */
+    /* 💾 CACHE SAVE */
     cache[url] = {
       data: responseData,
       timestamp: Date.now()
@@ -225,6 +224,8 @@ app.get('/api/rip', async (req, res) => {
     return res.json(responseData);
 
   } catch (err) {
+    console.log("❌ ERROR:", err.message);
+
     return res.status(500).json({
       success: false,
       error: "Server failure"
@@ -252,7 +253,8 @@ app.get('/api/trending', async (req, res) => {
 
     res.json({ success: true, results });
 
-  } catch {
+  } catch (e) {
+    console.log("⚠️ Trending failed:", e.message);
     res.status(500).json({ success: false });
   }
 });
