@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>NorthSky Dashboard</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: #020617;
+  color: #e2e8f0;
+  display: flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 230px;
+  height: 100vh;
+  background: #0f172a;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  font-weight: 700;
+  margin-bottom: 30px;
+}
+
+.nav-item {
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 5px;
+  opacity: 0.8;
+}
+
+.nav-item:hover {
+  background: rgba(255,255,255,0.05);
+  opacity: 1;
+}
+
+/* MAIN */
+.main {
+  flex: 1;
+  padding: 30px;
+}
+
+/* TOP BAR */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+button {
+  background: linear-gradient(135deg,#3b82f6,#6366f1);
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+}
+
+/* CARD */
+.card {
+  background: rgba(30,41,59,0.6);
+  padding: 20px;
+  border-radius: 14px;
+  margin-bottom: 20px;
+}
+
+/* INPUT */
+.input-box {
+  display: flex;
+  gap: 10px;
+}
+
+input {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: #020617;
+  color: white;
+}
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 15px;
+}
+
+/* BAR CHART */
+.bar {
+  height: 10px;
+  background: #1e293b;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+
+.fill {
+  height: 100%;
+  background: #22c55e;
+}
+
+/* LOGIN SCREEN */
+.login {
+  position: fixed;
+  inset: 0;
+  background: #020617;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-box {
+  background: #0f172a;
+  padding: 30px;
+  border-radius: 12px;
+  width: 300px;
+}
+
+.login input {
+  width: 100%;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="login">
+  <div class="login-box">
+    <h2>Login</h2>
+    <input id="email" placeholder="Email">
+    <input id="password" placeholder="Password" type="password">
+    <button onclick="login()">Login</button>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">🚀 NorthSky</div>
+
+  <div class="nav-item" onclick="view='dashboard';renderView()">Dashboard</div>
+  <div class="nav-item" onclick="view='analyze';renderView()">Analyze</div>
+  <div class="nav-item" onclick="view='team';renderView()">Team</div>
+  <div class="nav-item" onclick="upgrade()">Upgrade</div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <div class="topbar">
+    <h2 id="title">Dashboard</h2>
+    <div id="userEmail"></div>
+  </div>
+
+  <div id="app"></div>
+
+</div>
+
+<script>
+const API_URL = "https://northsky-ai.onrender.com";
+let view = "dashboard";
+
+/* ================= LOGIN ================= */
+function login() {
+  const email = document.getElementById("email").value;
+
+  localStorage.setItem("user", JSON.stringify({ email }));
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("userEmail").innerText = email;
+
+  renderView();
+}
+
+if (localStorage.getItem("user")) {
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("userEmail").innerText =
+    JSON.parse(localStorage.getItem("user")).email;
+}
+
+/* ================= VIEWS ================= */
+function renderView() {
+  const app = document.getElementById("app");
+  document.getElementById("title").innerText = view;
+
+  if (view === "dashboard") {
+    app.innerHTML = `
+      <div class="grid">
+        <div class="card">
+          <h3>Total Analyses</h3>
+          <p>${localStorage.getItem("usage") || 0}</p>
+        </div>
+
+        <div class="card">
+          <h3>Avg Viral Score</h3>
+          <p>${getAvgScore()}</p>
+        </div>
+
+        <div class="card">
+          <h3>Plan</h3>
+          <p>${getPlan()}</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Performance</h3>
+        ${renderChart()}
+      </div>
+    `;
+  }
+
+  if (view === "analyze") {
+    app.innerHTML = `
+      <div class="card">
+        <div class="input-box">
+          <input id="urlInput" placeholder="Paste URL">
+          <button onclick="runAI()">Analyze</button>
+        </div>
+      </div>
+
+      <div id="output"></div>
+    `;
+  }
+
+  if (view === "team") {
+    app.innerHTML = `
+      <div class="card">
+        <h3>Team Members</h3>
+        <p>you@example.com (Owner)</p>
+        <p>member@example.com</p>
+        <button>Add Member</button>
+      </div>
+    `;
+  }
+}
+
+/* ================= ANALYZE ================= */
+async function runAI() {
+  const url = document.getElementById("urlInput").value;
+  const res = await fetch(`${API_URL}/api/rip?url=${encodeURIComponent(url)}`);
+  const data = await res.json();
+
+  const score = data.analysis?.viral_score || 0;
+
+  saveScore(score);
+
+  document.getElementById("output").innerHTML = `
+    <div class="card">
+      <h2>${data.metadata.title}</h2>
+      <p>${data.metadata.description}</p>
+
+      <h3>Score: ${score}</h3>
+      <div class="bar"><div class="fill" style="width:${score*10}%"></div></div>
+    </div>
+  `;
+}
+
+/* ================= ANALYTICS ================= */
+function saveScore(score) {
+  let scores = JSON.parse(localStorage.getItem("scores") || "[]");
+  scores.push(score);
+  localStorage.setItem("scores", JSON.stringify(scores));
+
+  let usage = parseInt(localStorage.getItem("usage") || "0");
+  usage++;
+  localStorage.setItem("usage", usage);
+}
+
+function getAvgScore() {
+  let s = JSON.parse(localStorage.getItem("scores") || "[]");
+  if (!s.length) return 0;
+  return (s.reduce((a,b)=>a+b,0)/s.length).toFixed(1);
+}
+
+function getPlan() {
+  return localStorage.getItem("plan") || "Free";
+}
+
+/* ================= CHART ================= */
+function renderChart() {
+  let scores = JSON.parse(localStorage.getItem("scores") || "[]");
+
+  return scores.map(s => `
+    <div class="bar">
+      <div class="fill" style="width:${s*10}%"></div>
+    </div>
+  `).join("");
+}
+
+/* ================= STRIPE ================= */
+async function upgrade() {
+  const res = await fetch(`${API_URL}/api/create-checkout`, {
+    method: "POST"
+  });
+
+  const data = await res.json();
+  window.location.href = data.url;
+}
+
+/* INIT */
+renderView();
+</script>
+
+</body>
+</html>
