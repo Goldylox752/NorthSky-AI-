@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>NorthSky Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: radial-gradient(circle at top, #0f172a, #020617);
+  color: #e2e8f0;
+}
+
+/* LAYOUT */
+.container {
+  max-width: 1100px;
+  margin: auto;
+  padding: 30px;
+}
+
+/* HEADER */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.logo {
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.plan {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+/* HERO */
+.hero {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.hero h1 {
+  font-size: 34px;
+}
+
+/* INPUT */
+.input-box {
+  display: flex;
+  gap: 10px;
+  background: rgba(30,41,59,0.5);
+  padding: 10px;
+  border-radius: 14px;
+}
+
+input {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  background: #020617;
+  color: white;
+}
+
+button {
+  padding: 14px 20px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: white;
+  cursor: pointer;
+}
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+/* CARD */
+.card {
+  background: rgba(30,41,59,0.6);
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+/* BADGE */
+.badge {
+  background: #22c55e;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+/* UPGRADE */
+.upgrade {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  cursor: pointer;
+}
+
+/* HISTORY */
+.history div {
+  cursor: pointer;
+  padding: 5px;
+}
+
+/* CHART */
+.chart {
+  height: 8px;
+  background: #1e293b;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.bar {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #3b82f6);
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">🚀 NorthSky</div>
+    <div>
+      <span class="plan" id="plan">Free Plan</span>
+      <div class="upgrade" onclick="upgrade()">Upgrade →</div>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>AI Marketing Intelligence</h1>
+    <p>Analyze any site, video, or competitor instantly</p>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-box">
+    <input id="urlInput" placeholder="Enter URL..." />
+    <button onclick="runAI()">Analyze</button>
+  </div>
+
+  <div id="usage" style="margin-top:10px; font-size:13px;"></div>
+
+  <div id="loader"></div>
+  <div id="output"></div>
+
+  <div class="card history" id="history"></div>
+
+</div>
+
+<script>
+const API_URL = "https://northsky-ai.onrender.com";
+
+/* INIT */
+if (!localStorage.getItem("usage")) localStorage.setItem("usage", "0");
+if (!localStorage.getItem("history")) localStorage.setItem("history", "[]");
+if (!localStorage.getItem("plan")) localStorage.setItem("plan", "free");
+
+updateUsage();
+renderHistory();
+updatePlan();
+
+/* RUN */
+async function runAI() {
+  const url = document.getElementById("urlInput").value.trim();
+  const usage = parseInt(localStorage.getItem("usage"));
+  const plan = localStorage.getItem("plan");
+
+  if (!url) return;
+
+  if (plan === "free" && usage >= 5) {
+    document.getElementById("output").innerHTML =
+      "<div class='card'>Limit reached. Upgrade to Pro 🚀</div>";
+    return;
+  }
+
+  document.getElementById("loader").innerText = "Analyzing...";
+
+  const res = await fetch(`${API_URL}/rip?url=${encodeURIComponent(url)}`);
+  const data = await res.json();
+
+  document.getElementById("loader").innerText = "";
+
+  render(data);
+  saveHistory(url);
+  incrementUsage();
+}
+
+/* RENDER */
+function render(data) {
+  const meta = data.metadata || {};
+  const ai = data.analysis;
+
+  document.getElementById("output").innerHTML = `
+    <div class="card">
+      <h2>${meta.title || "Untitled"}</h2>
+      <p>${meta.description || ""}</p>
+    </div>
+
+    ${ai ? `
+    <div class="card">
+      <h3>🧠 Intelligence</h3>
+
+      <div class="grid">
+        <div><b>Summary</b><p>${ai.summary}</p></div>
+        <div><b>Hook</b><p>${ai.hook}</p></div>
+        <div><b>Audience</b><p>${ai.target_audience}</p></div>
+        <div><b>Monetization</b><p>${ai.monetization_angle}</p></div>
+      </div>
+
+      <div class="badge">Score: ${ai.viral_score}/10</div>
+
+      <div class="chart">
+        <div class="bar" style="width:${ai.viral_score * 10}%"></div>
+      </div>
+    </div>
+    ` : ""}
+  `;
+}
+
+/* COMPARE MODE */
+async function compare() {
+  const urls = prompt("Enter 2 URLs separated by comma");
+  if (!urls) return;
+
+  const [a, b] = urls.split(",");
+
+  const res1 = await fetch(`${API_URL}/rip?url=${a}`);
+  const res2 = await fetch(`${API_URL}/rip?url=${b}`);
+
+  const d1 = await res1.json();
+  const d2 = await res2.json();
+
+  document.getElementById("output").innerHTML = `
+    <div class="grid">
+      <div class="card">
+        <h3>${d1.metadata.title}</h3>
+        <p>Score: ${d1.analysis?.viral_score}</p>
+      </div>
+
+      <div class="card">
+        <h3>${d2.metadata.title}</h3>
+        <p>Score: ${d2.analysis?.viral_score}</p>
+      </div>
+    </div>
+  `;
+}
+
+/* HISTORY */
+function saveHistory(url) {
+  let h = JSON.parse(localStorage.getItem("history"));
+  h.unshift(url);
+  h = h.slice(0,5);
+  localStorage.setItem("history", JSON.stringify(h));
+  renderHistory();
+}
+
+function renderHistory() {
+  const h = JSON.parse(localStorage.getItem("history"));
+  document.getElementById("history").innerHTML =
+    "<b>Recent</b>" + h.map(x => `<div onclick="reuse('${x}')">${x}</div>`).join("");
+}
+
+function reuse(url) {
+  document.getElementById("urlInput").value = url;
+}
+
+/* USAGE */
+function incrementUsage() {
+  let u = parseInt(localStorage.getItem("usage"));
+  u++;
+  localStorage.setItem("usage", u);
+  updateUsage();
+}
+
+function updateUsage() {
+  document.getElementById("usage").innerText =
+    `Usage: ${localStorage.getItem("usage")} / 5`;
+}
+
+/* PLAN */
+function upgrade() {
+  localStorage.setItem("plan", "pro");
+  updatePlan();
+  alert("Upgraded to Pro 🚀 (demo)");
+}
+
+function updatePlan() {
+  document.getElementById("plan").innerText =
+    localStorage.getItem("plan") === "pro" ? "Pro Plan" : "Free Plan";
+}
+</script>
+
+</body>
+</html>
