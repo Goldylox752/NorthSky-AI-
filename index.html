@@ -20,7 +20,6 @@ body {
   padding: 30px;
 }
 
-/* HERO */
 .hero {
   text-align: center;
   padding: 40px 10px;
@@ -28,14 +27,8 @@ body {
 
 .hero h1 {
   font-size: 36px;
-  margin-bottom: 10px;
 }
 
-.hero p {
-  opacity: 0.8;
-}
-
-/* INPUT */
 input {
   width: 100%;
   padding: 14px;
@@ -44,7 +37,6 @@ input {
   border: none;
 }
 
-/* BUTTONS */
 button {
   width: 100%;
   padding: 14px;
@@ -53,7 +45,6 @@ button {
   border: none;
   cursor: pointer;
   font-weight: bold;
-  font-size: 16px;
 }
 
 .primary {
@@ -66,24 +57,20 @@ button {
   color: black;
 }
 
-/* OUTPUT */
 #output {
   margin-top: 20px;
   padding: 15px;
   background: #0f172a;
   border-radius: 10px;
-  min-height: 100px;
-  white-space: pre-wrap;
+  min-height: 120px;
 }
 
-/* FEATURES */
-.features {
-  text-align: center;
-  margin-top: 40px;
-  opacity: 0.8;
+img {
+  max-width: 100%;
+  border-radius: 10px;
+  margin-top: 10px;
 }
 
-/* PAYWALL */
 .paywall {
   position: fixed;
   inset: 0;
@@ -98,7 +85,6 @@ button {
   padding: 30px;
   border-radius: 14px;
   text-align: center;
-  max-width: 400px;
 }
 </style>
 </head>
@@ -107,75 +93,53 @@ button {
 
 <div class="container">
 
-  <!-- HERO -->
   <div class="hero">
     <h1>🌌 NorthSky Intelligence</h1>
     <p>Turn any website into AI-powered intelligence instantly</p>
   </div>
 
-  <!-- INPUT -->
-  <input id="lead" placeholder="Enter website URL or business..." />
+  <input id="lead" placeholder="Enter website URL..." />
 
   <button class="primary" onclick="runAI()">Generate Report</button>
   <button class="buy" onclick="buyAccess()">💳 Unlock Full Access - $20</button>
 
-  <!-- OUTPUT -->
   <div id="output">Ready.</div>
-
-  <!-- FEATURES -->
-  <div class="features">
-    <p>✔ No monthly fees</p>
-    <p>✔ Instant API access</p>
-    <p>✔ 100 AI requests included</p>
-  </div>
 
 </div>
 
-<!-- PAYWALL -->
 <div id="paywall" class="paywall">
   <div class="paywall-box">
     <h2>🔒 Access Locked</h2>
-    <p>Unlock to generate full reports</p>
     <button class="buy" onclick="buyAccess()">Unlock Now</button>
   </div>
 </div>
 
 <script>
+const API_URL = "https://YOUR-RENDER-APP.onrender.com";
 const STRIPE_LINK = "https://buy.stripe.com/28E14gcX91ak2FxgLK2ZO0x";
 
 /* ---------------- PAYWALL ---------------- */
-
 function showPaywall() {
   document.getElementById("paywall").style.display = "flex";
 }
-
-function hidePaywall() {
-  document.getElementById("paywall").style.display = "none";
-}
-
-/* ---------------- STRIPE ---------------- */
 
 function buyAccess() {
   window.location.href = STRIPE_LINK;
 }
 
-/* ---------------- INIT ---------------- */
-
-window.addEventListener("load", () => {
-  if (!localStorage.getItem("api_key")) {
-    showPaywall();
-    document.getElementById("output").innerText = "🔒 Locked";
-  }
-});
+/* ---------------- TEMP KEY (for testing) ---------------- */
+// REMOVE THIS LATER
+if (!localStorage.getItem("api_key")) {
+  localStorage.setItem("api_key", "your-super-secret-key");
+}
 
 /* ---------------- MAIN FUNCTION ---------------- */
-
 async function runAI() {
   const input = document.getElementById("lead").value;
   const output = document.getElementById("output");
 
   if (!input.trim()) {
-    output.innerText = "Enter a website or business";
+    output.innerText = "Enter a website URL";
     return;
   }
 
@@ -189,24 +153,28 @@ async function runAI() {
   output.innerText = "Analyzing...";
 
   try {
-    const res = await fetch("/api/ai", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey
-      },
-      body: JSON.stringify({ prompt: input })
-    });
+    const res = await fetch(
+      `${API_URL}/rip?url=${encodeURIComponent(input)}`,
+      {
+        headers: {
+          "x-api-key": apiKey
+        }
+      }
+    );
 
     const data = await res.json();
 
     if (!res.ok) {
-      showPaywall();
-      output.innerText = data.error || "Access denied";
+      output.innerText = data.error || "Failed";
       return;
     }
 
-    output.innerText = data.reply;
+    output.innerHTML = `
+      <h3>${data.title || "No title"}</h3>
+      <p>${data.description || "No description"}</p>
+      ${data.thumbnail ? `<img src="${data.thumbnail}" />` : ""}
+      <small>Source: ${data.source}</small>
+    `;
 
   } catch (e) {
     output.innerText = "Connection failed";
