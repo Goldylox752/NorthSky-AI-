@@ -47,10 +47,6 @@ h1{
   font-weight:bold;
 }
 
-.copy{
-  margin-left:10px;
-}
-
 .usage-bar{
   width:100%;
   height:10px;
@@ -64,6 +60,7 @@ h1{
   height:100%;
   background:#22c55e;
   width:0%;
+  transition: width 0.3s ease;
 }
 </style>
 </head>
@@ -103,38 +100,44 @@ h1{
 async function loadDashboard() {
   const key = localStorage.getItem("apiKey");
 
+  // 🔒 If no key → redirect (important)
   if (!key) {
-    document.getElementById("apiKey").innerText = "No API key found";
+    window.location.href = "/";
     return;
   }
 
   document.getElementById("apiKey").innerText = key;
 
-  // Fetch usage
-  const res = await fetch('/api/usage', {
-    headers: { 'x-api-key': key }
-  });
+  try {
+    const res = await fetch('/api/usage', {
+      headers: { 'x-api-key': key }
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (data.error) {
-    document.getElementById("usageText").innerText = data.error;
-    return;
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to load");
+    }
+
+    document.getElementById("plan").innerText = data.plan || "N/A";
+
+    document.getElementById("usageText").innerText =
+      `${data.used} / ${data.limit} requests`;
+
+    const percent = Math.min((data.used / data.limit) * 100, 100);
+    document.getElementById("usageFill").style.width = percent + "%";
+
+  } catch (err) {
+    document.getElementById("usageText").innerText = "Error loading usage";
+    console.error(err);
   }
-
-  document.getElementById("plan").innerText = data.plan;
-
-  document.getElementById("usageText").innerText =
-    `${data.used} / ${data.limit} requests today`;
-
-  const percent = (data.used / data.limit) * 100;
-  document.getElementById("usageFill").style.width = percent + "%";
 }
 
 function copyKey() {
   const key = document.getElementById("apiKey").innerText;
+
   navigator.clipboard.writeText(key);
-  alert("Copied!");
+  alert("API Key copied!");
 }
 
 loadDashboard();
