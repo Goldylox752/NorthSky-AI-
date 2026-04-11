@@ -102,17 +102,15 @@ button {
 </div>
 
 <script>
-const API_URL = "https://YOUR-RENDER-APP.onrender.com";
+const API_URL = "https://northsky-ai.onrender.com";
 
-/* ---------------- INIT ---------------- */
+/* INIT */
 if (!localStorage.getItem("api_key")) {
   localStorage.setItem("api_key", "your-super-secret-key");
 }
-
 if (!localStorage.getItem("usage")) {
   localStorage.setItem("usage", "0");
 }
-
 if (!localStorage.getItem("history")) {
   localStorage.setItem("history", JSON.stringify([]));
 }
@@ -120,7 +118,7 @@ if (!localStorage.getItem("history")) {
 updateUsage();
 renderHistory();
 
-/* ---------------- MAIN ---------------- */
+/* MAIN */
 async function runAI() {
   const input = document.getElementById("lead").value;
   const output = document.getElementById("output");
@@ -148,11 +146,10 @@ async function runAI() {
     loader.style.display = "none";
 
     if (!res.ok) {
-      output.innerText = data.error;
+      output.innerText = data.error || "Failed";
       return;
     }
 
-    /* ---------------- AI SUMMARY ---------------- */
     const summary = generateSummary(data);
 
     output.innerHTML = `
@@ -171,18 +168,18 @@ async function runAI() {
   }
 }
 
-/* ---------------- AI SUMMARY ---------------- */
+/* AI SUMMARY */
 function generateSummary(data) {
   if (!data.description) return "No summary available.";
 
   return `
-This page appears to be about: ${data.title}.
-It likely focuses on ${data.description.slice(0, 120)}...
-This could be useful for research, marketing insights, or competitive analysis.
+This page is about "${data.title}".
+It focuses on: ${data.description.slice(0, 120)}...
+Useful for insights, research, or competitor analysis.
   `;
 }
 
-/* ---------------- HISTORY ---------------- */
+/* HISTORY */
 function saveHistory(url) {
   let history = JSON.parse(localStorage.getItem("history"));
   history.unshift(url);
@@ -203,7 +200,7 @@ function reuse(url) {
   document.getElementById("lead").value = url;
 }
 
-/* ---------------- USAGE ---------------- */
+/* USAGE */
 function incrementUsage() {
   let usage = parseInt(localStorage.getItem("usage"));
   usage++;
