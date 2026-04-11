@@ -21,7 +21,17 @@ body {
 
 .hero {
   text-align: center;
-  padding: 30px;
+  padding: 40px 20px;
+}
+
+.hero h1 {
+  font-size: 34px;
+  margin-bottom: 10px;
+}
+
+.hero p {
+  opacity: 0.8;
+  font-size: 16px;
 }
 
 input {
@@ -29,7 +39,7 @@ input {
   padding: 14px;
   border-radius: 10px;
   border: none;
-  margin-top: 15px;
+  margin-top: 20px;
 }
 
 button {
@@ -49,7 +59,7 @@ button {
 
 #output {
   margin-top: 20px;
-  padding: 15px;
+  padding: 20px;
   background: #0f172a;
   border-radius: 10px;
 }
@@ -58,6 +68,18 @@ button {
   text-align: center;
   margin-top: 20px;
   display: none;
+}
+
+.features {
+  margin-top: 20px;
+  opacity: 0.85;
+  font-size: 14px;
+}
+
+.usage {
+  margin-top: 10px;
+  font-size: 13px;
+  opacity: 0.7;
 }
 
 .history {
@@ -70,12 +92,6 @@ button {
   cursor: pointer;
   padding: 5px;
 }
-
-.usage {
-  margin-top: 10px;
-  font-size: 13px;
-  opacity: 0.7;
-}
 </style>
 </head>
 
@@ -83,20 +99,33 @@ button {
 
 <div class="container">
 
+  <!-- HERO -->
   <div class="hero">
-    <h1>🌌 NorthSky Intelligence</h1>
-    <p>AI-powered website intelligence</p>
+    <h1>Turn Any Website Into Actionable Intelligence</h1>
+    <p>Analyze competitors, extract insights, and generate AI reports in seconds.</p>
   </div>
 
-  <input id="lead" placeholder="Enter website URL..." />
-  <button class="primary" onclick="runAI()">Generate Report</button>
+  <!-- INPUT -->
+  <input id="lead" placeholder="Enter a website URL (e.g. nike.com)" />
+  <button class="primary" onclick="runAI()">Analyze Website</button>
 
+  <!-- VALUE -->
+  <div class="features">
+    <p>✔ Extract key insights instantly</p>
+    <p>✔ Understand competitors</p>
+    <p>✔ AI-powered analysis</p>
+  </div>
+
+  <!-- USAGE -->
   <div class="usage" id="usage"></div>
 
-  <div class="loader" id="loader">⚡ Analyzing with AI...</div>
+  <!-- LOADER -->
+  <div class="loader" id="loader">⚡ Generating AI report...</div>
 
+  <!-- OUTPUT -->
   <div id="output">Ready.</div>
 
+  <!-- HISTORY -->
   <div class="history" id="history"></div>
 
 </div>
@@ -125,7 +154,7 @@ async function runAI() {
   const loader = document.getElementById("loader");
 
   if (!input.trim()) {
-    output.innerText = "Enter a URL";
+    output.innerText = "Enter a website URL";
     return;
   }
 
@@ -146,17 +175,33 @@ async function runAI() {
     loader.style.display = "none";
 
     if (!res.ok) {
-      output.innerText = data.error || "Failed";
+      output.innerText = data?.error || "Something went wrong";
       return;
     }
 
-    const summary = generateSummary(data);
+    /* AI MODE */
+    if (data?.analysis) {
+      output.innerHTML = `
+        <h2>🧠 Intelligence Report</h2>
+        <div style="margin-top:10px; line-height:1.6;">
+          ${data.analysis}
+        </div>
+      `;
+
+      saveHistory(input);
+      incrementUsage();
+      return;
+    }
+
+    /* FALLBACK */
+    const title = data?.title || "No title";
+    const description = data?.description || "No description";
+    const image = data?.thumbnail;
 
     output.innerHTML = `
-      <h3>${data.title || "No title"}</h3>
-      <p>${summary}</p>
-      ${data.thumbnail ? `<img src="${data.thumbnail}" />` : ""}
-      <small>${data.source}</small>
+      <h3>${title}</h3>
+      <p>${description}</p>
+      ${image ? `<img src="${image}" style="max-width:100%; border-radius:10px;" />` : ""}
     `;
 
     saveHistory(input);
@@ -166,17 +211,6 @@ async function runAI() {
     loader.style.display = "none";
     output.innerText = "Connection failed";
   }
-}
-
-/* AI SUMMARY */
-function generateSummary(data) {
-  if (!data.description) return "No summary available.";
-
-  return `
-This page is about "${data.title}".
-It focuses on: ${data.description.slice(0, 120)}...
-Useful for insights, research, or competitor analysis.
-  `;
 }
 
 /* HISTORY */
