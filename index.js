@@ -1,3 +1,49 @@
+/* =========================
+   TRENDING (YOUTUBE RSS)
+========================= */
+app.get('/trending', async (req, res) => {
+  try {
+    const rssUrl = "https://www.youtube.com/feeds/videos.xml?chart=mostPopular";
+
+    const { data } = await axios.get(rssUrl);
+
+    const videos = [...data.matchAll(/<entry>(.*?)<\/entry>/gs)].slice(0, 5);
+
+    const results = [];
+
+    for (let v of videos) {
+      const chunk = v[1];
+
+      const title = chunk.match(/<title>(.*?)<\/title>/)?.[1] || "";
+      const link = chunk.match(/<link rel="alternate" href="(.*?)"/)?.[1];
+
+      if (!link) continue;
+
+      // reuse your own system
+      const fakeReq = { query: { url: link } };
+
+      // OPTIONAL: quick metadata instead of full scrape
+      results.push({
+        title,
+        url: link
+      });
+    }
+
+    return res.json({
+      success: true,
+      results
+    });
+
+  } catch (e) {
+    return res.status(500).json({
+      error: "Trending fetch failed"
+    });
+  }
+});
+
+
+
+
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
