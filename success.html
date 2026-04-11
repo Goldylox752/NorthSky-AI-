@@ -20,17 +20,6 @@ body {
   margin: auto;
 }
 
-button {
-  margin-top: 20px;
-  padding: 14px 28px;
-  border: none;
-  border-radius: 10px;
-  background: #22c55e;
-  color: black;
-  font-weight: bold;
-  cursor: pointer;
-}
-
 .code {
   background: #0f172a;
   padding: 12px;
@@ -47,37 +36,31 @@ button {
   <h1>🎉 Payment Successful</h1>
   <p>Your access is ready</p>
 
-  <button onclick="getKey()">Get API Key</button>
+  <div id="keyBox" class="code"></div>
 
-  <div id="keyBox" class="code" style="display:none;"></div>
-
-  <button onclick="goBack()" style="display:none;" id="continueBtn">
-    Continue to App →
-  </button>
+  <p>Redirecting to dashboard...</p>
 </div>
 
 <script>
-async function getKey() {
-  try {
-    const res = await fetch('/api/create-key');
-    const data = await res.json();
+// ✅ Get API key from URL
+const params = new URLSearchParams(window.location.search);
+const apiKey = params.get("key");
 
-    // Save key locally
-    localStorage.setItem("api_key", data.apiKey);
+if (apiKey) {
+  // ✅ Save correctly (matches dashboard)
+  localStorage.setItem("apiKey", apiKey);
 
-    // Show key to user
-    document.getElementById("keyBox").style.display = "block";
-    document.getElementById("keyBox").innerText = data.apiKey;
+  // Show key
+  document.getElementById("keyBox").innerText = apiKey;
 
-    document.getElementById("continueBtn").style.display = "inline-block";
+  // Redirect to dashboard
+  setTimeout(() => {
+    window.location.href = "/dashboard";
+  }, 2000);
 
-  } catch (err) {
-    alert("Failed to generate key");
-  }
-}
-
-function goBack() {
-  window.location.href = "/";
+} else {
+  document.getElementById("keyBox").innerText =
+    "No API key found. Check your email.";
 }
 </script>
 
