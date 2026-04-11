@@ -3,9 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>NorthSky Intelligence</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
 <style>
+* { box-sizing: border-box; }
+
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
@@ -13,6 +18,7 @@ body {
   color: #e2e8f0;
 }
 
+/* LAYOUT */
 .container {
   max-width: 1000px;
   margin: auto;
@@ -52,6 +58,7 @@ input {
   background: #020617;
   color: white;
   font-size: 14px;
+  outline: none;
 }
 
 button {
@@ -62,9 +69,11 @@ button {
   color: white;
   cursor: pointer;
   font-weight: 600;
+  transition: 0.2s;
 }
 
 button:hover {
+  transform: scale(1.03);
   opacity: 0.9;
 }
 
@@ -85,7 +94,7 @@ button:hover {
   opacity: 0.85;
 }
 
-/* CARDS */
+/* CARD */
 .card {
   background: rgba(30, 41, 59, 0.6);
   border-radius: 16px;
@@ -94,18 +103,21 @@ button:hover {
   backdrop-filter: blur(12px);
 }
 
+/* MEDIA */
 img {
   width: 100%;
   border-radius: 10px;
   margin-top: 10px;
 }
 
+/* GRID */
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 15px;
 }
 
+/* TEXT */
 .label {
   font-size: 12px;
   opacity: 0.6;
@@ -113,7 +125,7 @@ img {
 }
 
 .badge {
-  margin-top: 10px;
+  margin-top: 12px;
   display: inline-block;
   padding: 6px 12px;
   border-radius: 999px;
@@ -140,7 +152,6 @@ img {
 }
 
 .history h4 {
-  margin-bottom: 10px;
   opacity: 0.7;
 }
 
@@ -156,26 +167,35 @@ img {
 }
 </style>
 </head>
+
 <body>
+
 <div class="container">
+
   <div class="hero">
     <h1>🚀 NorthSky Intelligence</h1>
     <p>Turn any URL into AI-powered marketing insights</p>
   </div>
+
   <div class="input-box">
-    <input id="urlInput" placeholder="Paste any URL (YouTube, website...)" />
+    <input id="urlInput" placeholder="Paste any URL..." />
     <button onclick="runAI()">Analyze</button>
   </div>
+
   <div class="features">
     <div>⚡ Instant Insights</div>
     <div>🧠 AI Analysis</div>
     <div>📈 Growth Ideas</div>
   </div>
+
   <div class="usage" id="usage"></div>
   <div class="loader" id="loader"></div>
+
   <div id="output"></div>
   <div class="history" id="history"></div>
+
 </div>
+
 <script>
 const API_URL = "https://northsky-ai.onrender.com";
 
@@ -195,11 +215,11 @@ renderHistory();
 
 /* MAIN */
 async function runAI() {
-  const url = document.getElementById("urlInput").value;
+  const url = document.getElementById("urlInput").value.trim();
   const output = document.getElementById("output");
   const loader = document.getElementById("loader");
 
-  if (!url.trim()) {
+  if (!url) {
     output.innerHTML = "<div class='card'>Enter a URL</div>";
     return;
   }
@@ -218,7 +238,7 @@ async function runAI() {
     loader.innerText = "";
 
     if (!res.ok) {
-      output.innerHTML = `<div class='card'>${data.error}</div>`;
+      output.innerHTML = `<div class='card'>${data.error || "Error"}</div>`;
       return;
     }
 
@@ -226,56 +246,44 @@ async function runAI() {
     saveHistory(url);
     incrementUsage();
 
-  } catch (e) {
+  } catch (err) {
     loader.innerText = "";
     output.innerHTML = "<div class='card'>Connection failed</div>";
   }
 }
 
-/* RENDER */
+/* RENDER (SAFE) */
 function render(data) {
   const output = document.getElementById("output");
 
+  const meta = data.metadata || {};
+  const ai = data.analysis;
+
   output.innerHTML = `
     <div class="card">
-      <h2>${data.metadata.title}</h2>
-      <p>${data.metadata.description}</p>
+      <h2>${meta.title || "Untitled"}</h2>
+      <p>${meta.description || "No description available"}</p>
 
-      ${data.metadata.image ? `<img src="${data.metadata.image}" />` : ""}
+      ${meta.image ? `<img src="${meta.image}" />` : ""}
       ${data.screenshot ? `<img src="${data.screenshot}" />` : ""}
 
-      <div class="label">Platform: ${data.platform}</div>
+      <div class="label">Platform: ${data.platform || "unknown"}</div>
     </div>
 
-    ${data.analysis ? `
+    ${ai ? `
       <div class="card">
         <h3>🧠 AI Intelligence</h3>
 
         <div class="grid">
-          <div>
-            <div class="label">Summary</div>
-            <p>${data.analysis.summary}</p>
-          </div>
-
-          <div>
-            <div class="label">Hook</div>
-            <p>${data.analysis.hook}</p>
-          </div>
-
-          <div>
-            <div class="label">Audience</div>
-            <p>${data.analysis.target_audience}</p>
-          </div>
-
-          <div>
-            <div class="label">Monetization</div>
-            <p>${data.analysis.monetization_angle}</p>
-          </div>
+          <div><div class="label">Summary</div><p>${ai.summary || "-"}</p></div>
+          <div><div class="label">Hook</div><p>${ai.hook || "-"}</p></div>
+          <div><div class="label">Audience</div><p>${ai.target_audience || "-"}</p></div>
+          <div><div class="label">Monetization</div><p>${ai.monetization_angle || "-"}</p></div>
         </div>
 
-        <div class="badge">Viral Score: ${data.analysis.viral_score}</div>
+        <div class="badge">Viral Score: ${ai.viral_score || "N/A"}</div>
       </div>
-    ` : ""}
+    ` : `<div class="card">No AI analysis available</div>`}
   `;
 }
 
@@ -292,7 +300,8 @@ function renderHistory() {
   const history = JSON.parse(localStorage.getItem("history"));
   const el = document.getElementById("history");
 
-  el.innerHTML = "<h4>Recent Searches</h4>" +
+  el.innerHTML =
+    "<h4>Recent Searches</h4>" +
     history.map(h => `<div onclick="reuse('${h}')">${h}</div>`).join("");
 }
 
@@ -310,44 +319,9 @@ function incrementUsage() {
 
 function updateUsage() {
   const usage = localStorage.getItem("usage");
-  document.getElementById("usage").innerText =
-    `Usage: ${usage}/100 requests`;
+  document.getElementById("usage").innerText = `Usage: ${usage}/100`;
 }
 </script>
+
 </body>
 </html>
-:::
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
