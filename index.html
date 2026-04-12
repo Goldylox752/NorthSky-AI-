@@ -30,7 +30,10 @@ button {
   background:linear-gradient(135deg,#3b82f6,#6366f1);
   color:white;
   cursor:pointer;
+  transition:0.2s;
 }
+
+button:hover { opacity:0.9; }
 
 .container {
   max-width:900px;
@@ -58,6 +61,7 @@ input {
   border:none;
   background:#020617;
   color:white;
+  outline:none;
 }
 
 .bar {
@@ -65,11 +69,38 @@ input {
   background:#1e293b;
   border-radius:10px;
   overflow:hidden;
+  margin-top:10px;
 }
 
 .fill {
   height:100%;
   background:#22c55e;
+  width:0%;
+  transition:0.3s;
+}
+
+.preview-img {
+  width:100%;
+  max-height:220px;
+  object-fit:cover;
+  border-radius:12px;
+  margin-top:10px;
+}
+
+.small {
+  opacity:0.7;
+  font-size:13px;
+}
+
+.loading {
+  opacity:0.7;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity:0.4; }
+  50% { opacity:1; }
+  100% { opacity:0.4; }
 }
 </style>
 </head>
@@ -77,7 +108,7 @@ input {
 <body>
 
 <div class="nav">
-  <div class="logo">🚀 NorthSky</div>
+  <div class="logo">🚀 NorthSky SaaS</div>
   <button onclick="upgrade()">Upgrade</button>
 </div>
 
@@ -88,6 +119,7 @@ input {
       <input id="urlInput" placeholder="Paste URL..." />
       <button onclick="runAI()">Analyze</button>
     </div>
+    <div class="small">Example: https://example.com</div>
   </div>
 
   <div id="output"></div>
@@ -97,7 +129,7 @@ input {
 <script>
 const API = "https://northsky-ai.onrender.com";
 
-/* SAFE FETCH WRAPPER */
+/* SAFE FETCH */
 async function safeFetch(url) {
   try {
     const res = await fetch(url);
@@ -107,14 +139,19 @@ async function safeFetch(url) {
   }
 }
 
-/* ANALYZE */
+/* LOADING UI */
+function loadingUI() {
+  document.getElementById("output").innerHTML = `
+    <div class="card loading">Analyzing URL...</div>
+  `;
+}
+
+/* MAIN FUNCTION */
 async function runAI() {
   const url = document.getElementById("urlInput").value.trim();
-  const output = document.getElementById("output");
-
   if (!url) return;
 
-  output.innerHTML = "<div class='card'>Analyzing...</div>";
+  loadingUI();
 
   const data = await safeFetch(
     `${API}/api/rip?url=${encodeURIComponent(url)}`
@@ -123,25 +160,55 @@ async function runAI() {
   render(data);
 }
 
-/* RENDER (SAFE VERSION) */
+/* RENDER UI */
 function render(data) {
-  const meta = data.metadata || {};
-  const score = Math.floor(Math.random() * 7 + 3);
+  const meta = data.metadata;
+
+  if (!data.success || !meta) {
+    document.getElementById("output").innerHTML = `
+      <div class="card">
+        ❌ Failed to load preview
+        <div class="small">${data.error || "Unknown error"}</div>
+      </div>
+    `;
+    return;
+  }
+
+  const score = calculateScore(meta);
 
   document.getElementById("output").innerHTML = `
     <div class="card">
-      <h2>${escapeHtml(meta.title || "No title")}</h2>
-      <p>${escapeHtml(meta.description || "No description")}</p>
 
-      <h3>Viral Score: ${score}/10</h3>
+      ${meta.image ? `<img class="preview-img" src="${meta.image}" />` : ""}
+
+      <h2>${escapeHtml(meta.title || "No title")}</h2>
+
+      <p>${escapeHtml(meta.description || "No description available")}</p>
+
+      <div class="small">Site: ${escapeHtml(meta.site || "")}</div>
+
+      <h3 style="margin-top:15px;">Quality Score: ${score}/10</h3>
+
       <div class="bar">
         <div class="fill" style="width:${score * 10}%"></div>
       </div>
+
     </div>
   `;
 }
 
-/* ESCAPE HTML (IMPORTANT SECURITY FIX) */
+/* REALISTIC SCORING (NOT FAKE RANDOM) */
+function calculateScore(meta) {
+  let score = 5;
+
+  if (meta.title && meta.title.length > 10) score += 2;
+  if (meta.description && meta.description.length > 50) score += 2;
+  if (meta.image) score += 1;
+
+  return Math.min(score, 10);
+}
+
+/* SECURITY */
 function escapeHtml(str) {
   return String(str)
     .replaceAll("&", "&amp;")
@@ -151,9 +218,9 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
-/* HISTORY */
+/* UPGRADE BUTTON */
 function upgrade() {
-  alert("Upgrade system coming soon");
+  alert("Stripe upgrade system connects in SaaS backend mode");
 }
 </script>
 
