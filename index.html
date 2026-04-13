@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NorthSky Intelligence</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#05060a;
+  --glass:rgba(255,255,255,0.05);
+  --border:rgba(148,163,184,0.18);
+  --accent:#38bdf8;
+  --green:#22c55e;
+  --text:#e2e8f0;
+  --muted:rgba(255,255,255,0.62);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+  font-family:Inter,system-ui;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(56,189,248,0.14), transparent 50%),
+    radial-gradient(circle at 85% 20%, rgba(34,197,94,0.10), transparent 55%),
+    radial-gradient(circle at 50% 100%, rgba(99,102,241,0.10), transparent 60%),
+    var(--bg);
+  color:var(--text);
+  overflow-x:hidden;
+}
+
+/* subtle animated glow */
+.glow{
+  position:fixed;
+  width:600px;
+  height:600px;
+  filter:blur(160px);
+  opacity:0.18;
+  z-index:0;
+  animation:float 12s ease-in-out infinite;
+}
+.glow.blue{background:#38bdf8; top:-200px; left:-200px;}
+.glow.green{background:#22c55e; bottom:-200px; right:-200px;}
+
+@keyframes float{
+  0%,100%{transform:translateY(0px)}
+  50%{transform:translateY(30px)}
+}
+
+/* NAV */
+.nav{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:24px 42px;
+  position:relative;
+  z-index:2;
+}
+
+.logo{
+  font-weight:800;
+  letter-spacing:-0.6px;
+}
+
+.badge{
+  padding:8px 14px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,0.03);
+  font-size:12px;
+  color:var(--muted);
+}
+
+/* LAYOUT */
+.container{
+  max-width:980px;
+  margin:auto;
+  padding:40px 20px 80px;
+  position:relative;
+  z-index:2;
+}
+
+/* HERO */
+.hero{
+  margin-bottom:20px;
+}
+.hero h1{
+  font-size:44px;
+  font-weight:800;
+  letter-spacing:-1px;
+}
+.hero p{
+  margin-top:10px;
+  color:var(--muted);
+  max-width:650px;
+  line-height:1.6;
+}
+
+/* CARD */
+.card{
+  background:var(--glass);
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:18px;
+  backdrop-filter:blur(18px);
+  margin-top:16px;
+  transition:0.25s;
+}
+.card:hover{
+  transform:translateY(-3px);
+  border-color:rgba(56,189,248,0.35);
+}
+
+/* INPUT */
+.input-box{
+  display:flex;
+  gap:10px;
+}
+
+input{
+  flex:1;
+  padding:14px;
+  border-radius:14px;
+  border:1px solid var(--border);
+  background:rgba(0,0,0,0.25);
+  color:var(--text);
+  outline:none;
+}
+
+input:focus{
+  border-color:var(--accent);
+}
+
+/* BUTTON */
+button{
+  padding:12px 18px;
+  border-radius:14px;
+  border:none;
+  background:linear-gradient(135deg,var(--accent),#6366f1);
+  color:white;
+  font-weight:700;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+button:hover{
+  transform:translateY(-2px);
+  opacity:0.92;
+}
+
+/* OUTPUT */
+#output{
+  margin-top:18px;
+}
+
+/* SCORE */
+.score-wrap{
+  margin-top:14px;
+}
+
+.bar{
+  height:10px;
+  background:#1e293b;
+  border-radius:999px;
+  overflow:hidden;
+  margin-top:8px;
+}
+
+.fill{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--green));
+  transition:0.6s ease;
+}
+
+/* METRICS */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-top:14px;
+}
+
+.metric{
+  padding:14px;
+  border-radius:16px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,0.03);
+}
+
+.metric h3{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.metric .val{
+  font-size:18px;
+  font-weight:700;
+  margin-top:6px;
+}
+
+/* IMAGE */
+.preview-img{
+  width:100%;
+  border-radius:16px;
+  margin-bottom:10px;
+}
+
+/* LOADING SKELETON */
+.skeleton{
+  height:90px;
+  border-radius:16px;
+  background:linear-gradient(90deg,#111827,#1f2937,#111827);
+  background-size:200% 100%;
+  animation:shimmer 1.2s infinite;
+}
+
+@keyframes shimmer{
+  0%{background-position:200% 0;}
+  100%{background-position:-200% 0;}
+}
+
+/* SMALL TEXT */
+.small{
+  color:var(--muted);
+  font-size:13px;
+  margin-top:6px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="glow blue"></div>
+<div class="glow green"></div>
+
+<div class="nav">
+  <div class="logo">🧠 NorthSky Intelligence</div>
+  <div class="badge">Silicon UI Engine</div>
+</div>
+
+<div class="container">
+
+  <div class="hero">
+    <h1>Website Intelligence Engine</h1>
+    <p>Real-time AI scoring for SEO, UX, trust, and structural quality. Built for SaaS scale systems.</p>
+  </div>
+
+  <div class="card">
+    <div class="input-box">
+      <input id="urlInput" placeholder="https://example.com" />
+      <button onclick="runAI()">Analyze</button>
+    </div>
+    <div class="small">AI-powered inspection layer</div>
+  </div>
+
+  <div id="output" class="card small">Waiting for analysis...</div>
+
+</div>
+
+<script>
+const API = "https://northsky-ai.onrender.com";
+
+async function safeFetch(url){
+  try{
+    const res = await fetch(url);
+    return await res.json();
+  }catch(e){
+    return {success:false};
+  }
+}
+
+function loadingUI(){
+  document.getElementById("output").innerHTML =
+    `<div class="skeleton"></div>`;
+}
+
+async function runAI(){
+  let url = document.getElementById("urlInput").value.trim();
+  if(!url) return;
+
+  loadingUI();
+
+  const data = await safeFetch(
+    `${API}/api/rip?url=${encodeURIComponent(url)}`
+  );
+
+  render(data);
+}
+
+function render(data){
+  const meta = data.metadata;
+
+  if(!data.success || !meta){
+    document.getElementById("output").innerHTML =
+      "❌ Analysis failed";
+    return;
+  }
+
+  const score = calc(meta);
+
+  document.getElementById("output").innerHTML = `
+    ${meta.image ? `<img class="preview-img" src="${meta.image}"/>` : ""}
+
+    <h2>${meta.title || "No title"}</h2>
+    <div class="small">${meta.description || ""}</div>
+
+    <div class="score-wrap">
+      <h3>Quality Score: ${score}/10</h3>
+      <div class="bar">
+        <div class="fill" style="width:${score*10}%"></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="metric">
+        <h3>SEO</h3>
+        <div class="val">${score >= 7 ? "Strong" : "Weak"}</div>
+      </div>
+
+      <div class="metric">
+        <h3>UX</h3>
+        <div class="val">${meta.image ? "Good" : "Weak"}</div>
+      </div>
+
+      <div class="metric">
+        <h3>Trust</h3>
+        <div class="val">${meta.description ? "High" : "Low"}</div>
+      </div>
+    </div>
+  `;
+}
+
+function calc(meta){
+  let s = 5;
+  if(meta.title?.length > 10) s+=2;
+  if(meta.description?.length > 50) s+=2;
+  if(meta.image) s+=1;
+  return Math.min(s,10);
+}
+</script>
+
+</body>
+</html>
