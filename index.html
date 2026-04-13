@@ -6,85 +6,147 @@
 
 <title>NorthSky Intelligence</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background: #0f172a;
+  background: radial-gradient(circle at top, #1e293b, #020617);
   color: white;
+}
+
+/* NAVBAR */
+.nav {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px 40px;
+  font-weight: 600;
+}
+
+.logo {
+  font-size: 18px;
+}
+
+.nav-links {
+  opacity: 0.7;
+}
+
+/* HERO */
+.hero {
+  text-align: center;
+  margin-top: 100px;
+}
+
+.hero h1 {
+  font-size: 42px;
+  margin-bottom: 10px;
+}
+
+.hero p {
+  opacity: 0.6;
+  margin-bottom: 30px;
+}
+
+/* INPUT */
+.search-box {
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 100vh;
-}
-
-.container {
-  text-align: center;
-  width: 90%;
-  max-width: 600px;
-}
-
-h1 {
-  font-size: 32px;
-  margin-bottom: 20px;
-}
-
-.input-group {
-  display: flex;
   gap: 10px;
+  max-width: 700px;
+  margin: 0 auto;
 }
 
-input {
+.search-box input {
   flex: 1;
-  padding: 14px;
-  border-radius: 10px;
+  padding: 16px;
+  border-radius: 12px;
   border: none;
   font-size: 16px;
+  background: #020617;
+  color: white;
+  outline: none;
 }
 
-button {
-  padding: 14px 20px;
+.search-box button {
+  padding: 16px 24px;
+  border-radius: 12px;
   border: none;
-  border-radius: 10px;
   background: #3b82f6;
   color: white;
   font-weight: 600;
   cursor: pointer;
+  transition: 0.2s;
 }
 
-button:hover {
+.search-box button:hover {
   background: #2563eb;
 }
 
+/* RESULT CARD */
 .result {
-  margin-top: 30px;
-  text-align: left;
-  background: #1e293b;
-  padding: 20px;
-  border-radius: 12px;
+  max-width: 700px;
+  margin: 40px auto;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(10px);
+  padding: 25px;
+  border-radius: 16px;
+  display: none;
 }
 
-img {
+.result-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  opacity: 0.8;
+}
+
+.result img {
   max-width: 100%;
   border-radius: 10px;
   margin-top: 10px;
+}
+
+/* FOOTER */
+.footer {
+  text-align: center;
+  margin-top: 80px;
+  opacity: 0.4;
+  font-size: 14px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-  <h1>NorthSky Intelligence</h1>
+<!-- NAV -->
+<div class="nav">
+  <div class="logo">NorthSky</div>
+  <div class="nav-links">Intelligence</div>
+</div>
 
-  <div class="input-group">
-    <input id="urlInput" placeholder="Enter any website (example.com)" />
+<!-- HERO -->
+<div class="hero">
+  <h1>Analyze Any Website</h1>
+  <p>Extract metadata, previews, and insights instantly</p>
+
+  <div class="search-box">
+    <input id="urlInput" placeholder="Enter a website (example.com)" />
     <button onclick="analyze()">Analyze</button>
   </div>
+</div>
 
-  <div id="result" class="result" style="display:none;"></div>
+<!-- RESULT -->
+<div id="result" class="result"></div>
+
+<!-- FOOTER -->
+<div class="footer">
+  © NorthSky Systems
 </div>
 
 <script>
@@ -112,15 +174,25 @@ async function analyze() {
     const m = data.metadata;
 
     resultBox.innerHTML = `
+      <div class="result-top">
+        <img src="${m.favicon}" width="20" height="20"/>
+        <span>${m.site}</span>
+      </div>
+
       <h2>${m.title}</h2>
-      <p>${m.description}</p>
+      <p style="opacity:0.7;">${m.description}</p>
+
       ${m.image ? `<img src="${m.image}" />` : ""}
-      <p><strong>${m.site}</strong></p>
     `;
-  } catch (err) {
+  } catch {
     resultBox.innerHTML = "❌ Error connecting to API";
   }
 }
+
+/* ENTER KEY SUPPORT */
+document.getElementById("urlInput").addEventListener("keypress", function(e) {
+  if (e.key === "Enter") analyze();
+});
 </script>
 
 </body>
