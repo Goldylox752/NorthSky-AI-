@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 
 /* ================= CACHE ================= */
 const cache = new Map();
-const CACHE_TTL = 1000 * 60 * 30; // 30 min
+const CACHE_TTL = 1000 * 60 * 30;
 
 function getCache(key) {
   const item = cache.get(key);
@@ -29,13 +29,10 @@ function getCache(key) {
 }
 
 function setCache(key, data) {
-  cache.set(key, {
-    data,
-    time: Date.now(),
-  });
+  cache.set(key, { data, time: Date.now() });
 }
 
-/* ================= URL NORMALIZER ================= */
+/* ================= HELPERS ================= */
 function normalizeURL(input) {
   try {
     if (!input) return null;
@@ -46,11 +43,20 @@ function normalizeURL(input) {
   }
 }
 
-/* ================= FETCH HTML ================= */
+function isURL(str) {
+  try {
+    new URL(str.startsWith("http") ? str : "https://" + str);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/* ================= FETCH ================= */
 async function fetchHTML(url) {
   try {
     const res = await axios.get(url, {
-      timeout: 10000,
+      timeout: 12000,
       maxRedirects: 5,
       headers: {
         "User-Agent":
@@ -67,61 +73,37 @@ async function fetchHTML(url) {
 
 /* ================= PARSER ================= */
 function parseHTML(html, url) {
-  try {
-    const $ = cheerio.load(html);
+  const $ = cheerio.load(html);
 
-    const title =
-      $("meta[property='og:title']").attr("content") ||
-      $("meta[name='twitter:title']").attr("content") ||
-      $("title").text().trim() ||
-      "Untitled";
+  const title =
+    $("meta[property='og:title']").attr("content") ||
+    $("title").text().trim() ||
+    "Untitled";
 
-    const description =
-      $("meta[property='og:description']").attr("content") ||
-      $("meta[name='description']").attr("content") ||
-      $("meta[name='twitter:description']").attr("content") ||
-      $("p").first().text().trim().slice(0, 200) ||
-      "";
+  const description =
+    $("meta[property='og:description']").attr("content") ||
+    $("meta[name='description']").attr("content") ||
+    $("p").first().text().trim().slice(0, 200) ||
+    "";
 
-    const image =
-      $("meta[property='og:image']").attr("content") ||
-      $("meta[name='twitter:image']").attr("content") ||
-      null;
+  const image =
+    $("meta[property='og:image']").attr("content") ||
+    null;
 
-    const site = new URL(url).hostname.replace("www.", "");
+  const site = new URL(url).hostname.replace("www.", "");
 
-    return {
-      title,
-      description,
-      image,
-      site,
-      favicon: `https://${site}/favicon.ico`,
-    };
-  } catch (err) {
-    console.log("PARSE ERROR:", err.message);
-    return null;
-  }
+  return { title, description, image, site };
 }
 
-/* ================= ENGINE ================= */
-async function engine(url) {
+/* ================= CORE ENGINE ================= */
+async function scrape(url) {
   const html = await fetchHTML(url);
 
   if (!html) {
-    return {
-      success: false,
-      error: "fetch_failed",
-    };
+    return { success: false, error: "fetch_failed" };
   }
 
   const metadata = parseHTML(html, url);
-
-  if (!metadata) {
-    return {
-      success: false,
-      error: "parse_failed",
-    };
-  }
 
   return {
     success: true,
@@ -129,58 +111,111 @@ async function engine(url) {
   };
 }
 
-/* ================= API ROUTE ================= */
-app.get("/api/rip", async (req, res) => {
-  try {
-    const rawUrl = req.query.url;
-    const url = normalizeURL(rawUrl);
+/* ================= MOCK SEARCH ENGINE ================= */
+async function searchEngine(query) {
+  // Placeholder “multi-site search”
+  // Later you can replace with SerpAPI / Bing API
 
-    if (!url) {
-      return res.status(400).json({
-        success: false,
-        error: "invalid_url",
+  const fakeResults = [
+    `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+    `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
+    `https://www.bing.com/search?q=${encodeURIComponent(query)}`
+  ];
+
+  const results = [];
+
+  for (const url of fakeResults) {
+    const data = await scrape(url);
+    if (data.success) {
+      results.push({
+        url,
+        ...data.metadata
       });
     }
-
-    const key = crypto.createHash("md5").update(url).digest("hex");
-
-    const cached = getCache(key);
-    if (cached) {
-      return res.json({
-        success: true,
-        cached: true,
-        ...cached,
-      });
-    }
-
-    const result = await engine(url);
-
-    if (!result.success) {
-      return res.status(500).json(result);
-    }
-
-    setCache(key, result);
-
-    return res.json(result);
-  } catch (err) {
-    console.log("SERVER ERROR:", err.message);
-
-    return res.status(500).json({
-      success: false,
-      error: "server_error",
-    });
   }
+
+  return { success: true, query, results };
+}
+
+/* ================= ASK NORTHSKY (ROUTER) ================= */
+async function askEngine(input) {
+  if (isURL(input)) {
+    const url = normalizeURL(input);
+    return await scrape(url);
+  }
+
+  const search = await searchEngine(input);
+
+  return {
+    success: true,
+    type: "search",
+    answer: `Here are results for "${input}"`,
+    ...search
+  };
+}
+
+/* ================= ROUTES ================= */
+
+/* 🔥 1. SINGLE SCRAPE (your original) */
+app.get("/api/rip", async (req, res) => {
+  const url = normalizeURL(req.query.url);
+  if (!url) return res.status(400).json({ success: false, error: "invalid_url" });
+
+  const key = crypto.createHash("md5").update(url).digest("hex");
+
+  const cached = getCache(key);
+  if (cached) return res.json({ success: true, cached: true, ...cached });
+
+  const result = await scrape(url);
+
+  if (!result.success) {
+    return res.status(500).json(result);
+  }
+
+  setCache(key, result);
+
+  res.json(result);
 });
 
-/* ================= HEALTH CHECK ================= */
+/* 🔍 2. MULTI SEARCH ENGINE */
+app.get("/api/search", async (req, res) => {
+  const q = req.query.q;
+  if (!q) return res.status(400).json({ success: false, error: "no_query" });
+
+  const key = crypto.createHash("md5").update(q).digest("hex");
+
+  const cached = getCache(key);
+  if (cached) return res.json({ success: true, cached: true, ...cached });
+
+  const result = await searchEngine(q);
+
+  setCache(key, result);
+
+  res.json(result);
+});
+
+/* 🧠 3. ASK NORTHSKY (MAIN AI ENTRY) */
+app.get("/api/ask", async (req, res) => {
+  const input = req.query.q;
+
+  if (!input) {
+    return res.status(400).json({ success: false, error: "no_input" });
+  }
+
+  const result = await askEngine(input);
+  res.json(result);
+});
+
+/* ================= HEALTH ================= */
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     uptime: process.uptime(),
+    cacheSize: cache.size
   });
 });
 
-/* ================= START SERVER ================= */
+/* ================= START ================= */
 app.listen(PORT, () => {
-  console.log(`🚀 NorthSky API running on port ${PORT}`);
+  console.log(`🚀 NorthSky v2 running on port ${PORT}`);
 });
