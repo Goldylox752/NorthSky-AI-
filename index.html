@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NorthSky Intelligence</title>
+<title>NorthSky AI</title>
 
 <style>
 :root{
@@ -96,6 +96,7 @@ input{
   border:1px solid var(--border);
   background:rgba(0,0,0,0.25);
   color:var(--text);
+  outline:none;
 }
 
 button{
@@ -120,7 +121,7 @@ button{
   margin-bottom:10px;
 }
 
-/* SCORE */
+/* SCORE BAR */
 .bar{
   height:10px;
   background:#1e293b;
@@ -135,7 +136,7 @@ button{
   background:linear-gradient(90deg,var(--accent),var(--green));
 }
 
-/* INSIGHTS GRID */
+/* GRID */
 .grid{
   display:grid;
   grid-template-columns:repeat(3,1fr);
@@ -161,7 +162,7 @@ button{
   margin-top:6px;
 }
 
-/* NEW: INSIGHT CARDS */
+/* INSIGHTS (IMPORTANT UPGRADE) */
 .insights{
   margin-top:14px;
   display:grid;
@@ -175,9 +176,15 @@ button{
   background:rgba(255,255,255,0.03);
   font-size:13px;
   color:var(--muted);
+  transition:0.2s;
 }
 
-/* SKELETON */
+.insight:hover{
+  border-color:rgba(56,189,248,0.35);
+  transform:translateY(-2px);
+}
+
+/* LOADING */
 .skeleton{
   height:90px;
   border-radius:14px;
@@ -203,7 +210,7 @@ button{
 <body>
 
 <div class="nav">
-  <div class="logo">🧠 NorthSky Intelligence</div>
+  <div class="logo">🧠 NorthSky AI</div>
   <div class="badge">Silicon Engine</div>
 </div>
 
@@ -211,7 +218,7 @@ button{
 
   <div class="hero">
     <h1>Website Intelligence Engine</h1>
-    <p>AI-grade SEO, UX, trust, and structure analysis — optimized for SaaS deployment.</p>
+    <p>AI-grade SEO, UX, trust, and structure analysis — optimized for SaaS scaling.</p>
   </div>
 
   <div class="card">
@@ -298,7 +305,7 @@ function render(data){
     </div>
 
     <div class="insights">
-      <div class="insight">💡 Improve metadata depth for better SEO ranking signals</div>
+      <div class="insight">💡 Improve metadata depth for SEO ranking signals</div>
       <div class="insight">⚡ Add structured data (JSON-LD) for AI visibility</div>
       <div class="insight">🔒 Ensure HTTPS + trust signals for conversion lift</div>
     </div>
