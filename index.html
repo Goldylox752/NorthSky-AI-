@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NorthSky Intelligence</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#05060a;
+  --card:rgba(255,255,255,0.04);
+  --border:rgba(148,163,184,0.15);
+  --accent:#38bdf8;
+  --green:#22c55e;
+  --text:#e2e8f0;
+  --muted:rgba(255,255,255,0.6);
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  font-family:Inter,system-ui;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(56,189,248,0.12), transparent 45%),
+    radial-gradient(circle at 80% 20%, rgba(34,197,94,0.10), transparent 45%),
+    var(--bg);
+  color:var(--text);
+}
+
+/* NAV */
+.nav{
+  display:flex;
+  justify-content:space-between;
+  padding:20px 40px;
+  align-items:center;
+}
+
+.logo{
+  font-weight:700;
+  letter-spacing:-0.5px;
+}
+
+button{
+  padding:10px 16px;
+  border-radius:999px;
+  border:none;
+  background:var(--accent);
+  color:#000;
+  font-weight:600;
+  cursor:pointer;
+}
+
+/* LAYOUT */
+.container{
+  max-width:900px;
+  margin:auto;
+  padding:30px 20px;
+}
+
+/* CARD */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:18px;
+  backdrop-filter:blur(14px);
+  margin-top:14px;
+}
+
+/* INPUT */
+.input-box{
+  display:flex;
+  gap:10px;
+}
+
+input{
+  flex:1;
+  padding:12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:rgba(0,0,0,0.25);
+  color:var(--text);
+  outline:none;
+}
+
+input:focus{
+  border-color:var(--accent);
+}
+
+/* OUTPUT STRUCTURE */
+h2{
+  margin-top:10px;
+}
+
+.small{
+  color:var(--muted);
+  font-size:13px;
+}
+
+/* SCORE */
+.score-wrap{
+  margin-top:15px;
+}
+
+.bar{
+  height:10px;
+  background:#1e293b;
+  border-radius:999px;
+  overflow:hidden;
+  margin-top:8px;
+}
+
+.fill{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--green));
+  transition:0.5s;
+}
+
+/* GRID INSIGHTS */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-top:15px;
+}
+
+.metric{
+  padding:12px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:rgba(255,255,255,0.03);
+}
+
+.metric h3{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.metric .val{
+  font-size:20px;
+  font-weight:700;
+  margin-top:6px;
+  color:var(--green);
+}
+
+/* LOADING */
+.loading{
+  opacity:0.7;
+  animation:pulse 1.2s infinite;
+}
+
+@keyframes pulse{
+  0%{opacity:0.4}
+  50%{opacity:1}
+  100%{opacity:0.4}
+}
+
+/* IMAGE */
+.preview-img{
+  width:100%;
+  border-radius:14px;
+  margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="nav">
+  <div class="logo">🧠 NorthSky Intelligence</div>
+  <button onclick="upgrade()">Upgrade</button>
+</div>
+
+<div class="container">
+
+  <!-- INPUT -->
+  <div class="card">
+    <div class="input-box">
+      <input id="urlInput" placeholder="Enter URL (https://example.com)" />
+      <button onclick="runAI()">Analyze</button>
+    </div>
+    <div class="small">AI scans SEO, UX, and structure in real time</div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div id="output" class="card small">Waiting for analysis...</div>
+
+</div>
+
+<script>
+const API = "https://northsky-ai.onrender.com";
+
+/* FETCH */
+async function safeFetch(url){
+  try{
+    const res = await fetch(url);
+    return await res.json();
+  }catch(e){
+    return {success:false,error:"Network error"};
+  }
+}
+
+/* LOADING */
+function loadingUI(){
+  document.getElementById("output").innerHTML =
+    `<div class="loading">🧠 Running AI analysis...</div>`;
+}
+
+/* MAIN */
+async function runAI(){
+  let url = document.getElementById("urlInput").value.trim();
+  if(!url) return;
+
+  loadingUI();
+
+  const data = await safeFetch(
+    `${API}/api/rip?url=${encodeURIComponent(url)}`
+  );
+
+  render(data);
+}
+
+/* RENDER */
+function render(data){
+  const meta = data.metadata;
+
+  if(!data.success || !meta){
+    document.getElementById("output").innerHTML =
+      "❌ Failed to analyze site";
+    return;
+  }
+
+  const score = calc(meta);
+
+  document.getElementById("output").innerHTML = `
+    ${meta.image ? `<img class="preview-img" src="${meta.image}"/>` : ""}
+
+    <h2>${meta.title || "No title"}</h2>
+    <div class="small">${meta.description || ""}</div>
+
+    <div class="score-wrap">
+      <h3>Quality Score: ${score}/10</h3>
+      <div class="bar">
+        <div class="fill" style="width:${score*10}%"></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="metric">
+        <h3>SEO</h3>
+        <div class="val">${score >= 7 ? "Good" : "Weak"}</div>
+      </div>
+
+      <div class="metric">
+        <h3>UX</h3>
+        <div class="val">${meta.image ? "Good" : "Weak"}</div>
+      </div>
+
+      <div class="metric">
+        <h3>Trust</h3>
+        <div class="val">${meta.description ? "High" : "Low"}</div>
+      </div>
+    </div>
+  `;
+}
+
+/* SCORE */
+function calc(meta){
+  let s = 5;
+  if(meta.title?.length > 10) s+=2;
+  if(meta.description?.length > 50) s+=2;
+  if(meta.image) s+=1;
+  return Math.min(s,10);
+}
+
+/* UPGRADE */
+function upgrade(){
+  alert("Connect Stripe here → SaaS ready flow");
+}
+</script>
+
+</body>
+</html>
