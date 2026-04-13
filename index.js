@@ -36,6 +36,7 @@ function setCache(key, data) {
 function normalizeURL(input) {
   try {
     if (!input) return null;
+    input = input.trim();
     if (!input.startsWith("http")) input = "https://" + input;
     return new URL(input).toString();
   } catch {
@@ -87,36 +88,31 @@ function parseHTML(html, url) {
     "";
 
   const image =
-    $("meta[property='og:image']").attr("content") ||
-    null;
+    $("meta[property='og:image']").attr("content") || null;
 
   const site = new URL(url).hostname.replace("www.", "");
 
   return { title, description, image, site };
 }
 
-/* ================= CORE ENGINE ================= */
+/* ================= SCRAPER ENGINE ================= */
 async function scrape(url) {
   const html = await fetchHTML(url);
 
-  if (!html) {
-    return { success: false, error: "fetch_failed" };
-  }
+  if (!html) return { success: false, error: "fetch_failed" };
 
   const metadata = parseHTML(html, url);
 
   return {
     success: true,
+    type: "scrape",
     metadata,
   };
 }
 
-/* ================= MOCK SEARCH ENGINE ================= */
+/* ================= SEARCH ENGINE (MOCK) ================= */
 async function searchEngine(query) {
-  // Placeholder “multi-site search”
-  // Later you can replace with SerpAPI / Bing API
-
-  const fakeResults = [
+  const urls = [
     `https://www.google.com/search?q=${encodeURIComponent(query)}`,
     `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
     `https://www.bing.com/search?q=${encodeURIComponent(query)}`
@@ -124,20 +120,26 @@ async function searchEngine(query) {
 
   const results = [];
 
-  for (const url of fakeResults) {
+  for (const url of urls) {
     const data = await scrape(url);
+
     if (data.success) {
       results.push({
-        url,
-        ...data.metadata
+        source: url,
+        ...data.metadata,
       });
     }
   }
 
-  return { success: true, query, results };
+  return {
+    success: true,
+    type: "search",
+    query,
+    results,
+  };
 }
 
-/* ================= ASK NORTHSKY (ROUTER) ================= */
+/* ================= ASK ENGINE (SMART ROUTER) ================= */
 async function askEngine(input) {
   if (isURL(input)) {
     const url = normalizeURL(input);
@@ -148,18 +150,21 @@ async function askEngine(input) {
 
   return {
     success: true,
-    type: "search",
-    answer: `Here are results for "${input}"`,
-    ...search
+    type: "ask",
+    answer: `Results for: "${input}"`,
+    ...search,
   };
 }
 
 /* ================= ROUTES ================= */
 
-/* 🔥 1. SINGLE SCRAPE (your original) */
+/* 🔥 SCRAPE */
 app.get("/api/rip", async (req, res) => {
   const url = normalizeURL(req.query.url);
-  if (!url) return res.status(400).json({ success: false, error: "invalid_url" });
+
+  if (!url) {
+    return res.status(400).json({ success: false, error: "invalid_url" });
+  }
 
   const key = crypto.createHash("md5").update(url).digest("hex");
 
@@ -173,14 +178,16 @@ app.get("/api/rip", async (req, res) => {
   }
 
   setCache(key, result);
-
   res.json(result);
 });
 
-/* 🔍 2. MULTI SEARCH ENGINE */
+/* 🔍 SEARCH */
 app.get("/api/search", async (req, res) => {
   const q = req.query.q;
-  if (!q) return res.status(400).json({ success: false, error: "no_query" });
+
+  if (!q) {
+    return res.status(400).json({ success: false, error: "no_query" });
+  }
 
   const key = crypto.createHash("md5").update(q).digest("hex");
 
@@ -190,11 +197,10 @@ app.get("/api/search", async (req, res) => {
   const result = await searchEngine(q);
 
   setCache(key, result);
-
   res.json(result);
 });
 
-/* 🧠 3. ASK NORTHSKY (MAIN AI ENTRY) */
+/* 🧠 ASK NORTHSKY (MAIN AI ENTRY) */
 app.get("/api/ask", async (req, res) => {
   const input = req.query.q;
 
@@ -211,11 +217,11 @@ app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     uptime: process.uptime(),
-    cacheSize: cache.size
+    cacheSize: cache.size,
   });
 });
 
 /* ================= START ================= */
 app.listen(PORT, () => {
-  console.log(`🚀 NorthSky v2 running on port ${PORT}`);
+  console.log(`🚀 NorthSky v2.1 running on port ${PORT}`);
 });
