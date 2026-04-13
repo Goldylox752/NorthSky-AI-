@@ -1,141 +1,127 @@
-/* ================= CORE ================= */
-const express = require("express");
-const axios = require("axios");
-const cheerio = require("cheerio");
-const crypto = require("crypto");
-require("dotenv").config();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-const app = express();
-app.use(express.json());
+<title>NorthSky Intelligence</title>
 
-const PORT = process.env.PORT || 3000;
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
-/* ================= SIMPLE IN-MEMORY CACHE ================= */
-const cache = new Map();
-const CACHE_TTL = 1000 * 60 * 30; // 30 min
+<style>
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: #0f172a;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
 
-function getCache(key) {
-  const item = cache.get(key);
-  if (!item) return null;
+.container {
+  text-align: center;
+  width: 90%;
+  max-width: 600px;
+}
 
-  if (Date.now() - item.time > CACHE_TTL) {
-    cache.delete(key);
-    return null;
+h1 {
+  font-size: 32px;
+  margin-bottom: 20px;
+}
+
+.input-group {
+  display: flex;
+  gap: 10px;
+}
+
+input {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  font-size: 16px;
+}
+
+button {
+  padding: 14px 20px;
+  border: none;
+  border-radius: 10px;
+  background: #3b82f6;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2563eb;
+}
+
+.result {
+  margin-top: 30px;
+  text-align: left;
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 12px;
+}
+
+img {
+  max-width: 100%;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>NorthSky Intelligence</h1>
+
+  <div class="input-group">
+    <input id="urlInput" placeholder="Enter any website (example.com)" />
+    <button onclick="analyze()">Analyze</button>
+  </div>
+
+  <div id="result" class="result" style="display:none;"></div>
+</div>
+
+<script>
+async function analyze() {
+  const input = document.getElementById("urlInput").value.trim();
+  const resultBox = document.getElementById("result");
+
+  if (!input) {
+    alert("Enter a URL");
+    return;
   }
 
-  return item.data;
-}
+  resultBox.style.display = "block";
+  resultBox.innerHTML = "⏳ Analyzing...";
 
-function setCache(key, data) {
-  cache.set(key, {
-    data,
-    time: Date.now()
-  });
-}
-
-/* ================= FETCH ================= */
-async function fetchHTML(url) {
   try {
-    const { data } = await axios.get(url, {
-      timeout: 8000,
-      headers: {
-        "User-Agent": "Mozilla/5.0"
-      }
-    });
+    const res = await fetch(`/api/rip?url=${encodeURIComponent(input)}`);
+    const data = await res.json();
 
-    return data;
-  } catch {
-    return null;
-  }
-}
-
-/* ================= PARSER ================= */
-function parse(html, url) {
-  const $ = cheerio.load(html);
-
-  const title =
-    $("meta[property='og:title']").attr("content") ||
-    $("title").text() ||
-    "Untitled";
-
-  const description =
-    $("meta[name='description']").attr("content") ||
-    $("meta[property='og:description']").attr("content") ||
-    $("p").first().text().slice(0, 200) ||
-    "";
-
-  const image =
-    $("meta[property='og:image']").attr("content") || null;
-
-  const site = new URL(url).hostname.replace("www.", "");
-
-  return {
-    title,
-    description,
-    image,
-    site,
-    favicon: `https://${site}/favicon.ico`
-  };
-}
-
-/* ================= ENGINE ================= */
-async function engine(url) {
-  const html = await fetchHTML(url);
-
-  if (!html) {
-    return {
-      success: false,
-      error: "fetch_failed"
-    };
-  }
-
-  return {
-    success: true,
-    metadata: parse(html, url)
-  };
-}
-
-/* ================= MAIN API ================= */
-app.get("/api/rip", async (req, res) => {
-  try {
-    let { url } = req.query;
-    if (!url) return res.json({ error: "no_url" });
-
-    if (!url.startsWith("http")) {
-      url = "https://" + url;
+    if (!data.success) {
+      resultBox.innerHTML = "❌ Failed to fetch data";
+      return;
     }
 
-    const key = crypto.createHash("md5").update(url).digest("hex");
+    const m = data.metadata;
 
-    const cached = getCache(key);
-    if (cached) {
-      return res.json({
-        success: true,
-        cached: true,
-        ...cached
-      });
-    }
-
-    const result = await engine(url);
-
-    setCache(key, result);
-
-    res.json(result);
-
+    resultBox.innerHTML = `
+      <h2>${m.title}</h2>
+      <p>${m.description}</p>
+      ${m.image ? `<img src="${m.image}" />` : ""}
+      <p><strong>${m.site}</strong></p>
+    `;
   } catch (err) {
-    res.json({
-      success: false,
-      error: "server_error"
-    });
+    resultBox.innerHTML = "❌ Error connecting to API";
   }
-});
+}
+</script>
 
-/* ================= HEALTH CHECK ================= */
-app.get("/", (req, res) => {
-  res.send("🚀 NorthSky API Running");
-});
-
-/* ================= START ================= */
-app.listen(PORT, () => {
-  console.log("🚀 SERVER RUNNING ON PORT", PORT);
-});
+</body>
+</html>
