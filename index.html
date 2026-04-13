@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
-<title>NorthSky Intelligence</title>
+<title>NorthSky AI Platform v3</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
@@ -20,179 +19,245 @@ body {
   color: white;
 }
 
-/* NAVBAR */
+/* NAV */
 .nav {
-  display: flex;
-  justify-content: space-between;
-  padding: 20px 40px;
-  font-weight: 600;
+  display:flex;
+  justify-content:space-between;
+  padding:20px 40px;
+  font-weight:600;
 }
 
 .logo {
-  font-size: 18px;
+  font-size:18px;
 }
 
-.nav-links {
-  opacity: 0.7;
+.tabs {
+  display:flex;
+  gap:10px;
+}
+
+.tab {
+  padding:8px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  opacity:0.6;
+  transition:0.2s;
+  border:1px solid transparent;
+}
+
+.tab.active {
+  opacity:1;
+  border:1px solid #3b82f6;
+  background:rgba(59,130,246,0.15);
 }
 
 /* HERO */
 .hero {
-  text-align: center;
-  margin-top: 100px;
+  text-align:center;
+  margin-top:80px;
 }
 
 .hero h1 {
-  font-size: 42px;
-  margin-bottom: 10px;
+  font-size:42px;
 }
 
 .hero p {
-  opacity: 0.6;
-  margin-bottom: 30px;
+  opacity:0.6;
 }
 
 /* INPUT */
-.search-box {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  max-width: 700px;
-  margin: 0 auto;
+.box {
+  display:flex;
+  justify-content:center;
+  margin-top:25px;
 }
 
-.search-box input {
-  flex: 1;
-  padding: 16px;
-  border-radius: 12px;
-  border: none;
-  font-size: 16px;
-  background: #020617;
-  color: white;
-  outline: none;
+.box input {
+  width:60%;
+  padding:16px;
+  border-radius:12px;
+  border:none;
+  background:#0f172a;
+  color:white;
+  outline:none;
 }
 
-.search-box button {
-  padding: 16px 24px;
-  border-radius: 12px;
-  border: none;
-  background: #3b82f6;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s;
+.box button {
+  padding:16px 20px;
+  margin-left:10px;
+  border-radius:12px;
+  border:none;
+  background:#3b82f6;
+  color:white;
+  cursor:pointer;
+  font-weight:600;
 }
 
-.search-box button:hover {
-  background: #2563eb;
+/* OUTPUT */
+.output {
+  max-width:800px;
+  margin:40px auto;
+  padding:20px;
+  background:rgba(15,23,42,0.6);
+  border-radius:16px;
+  display:none;
+  backdrop-filter:blur(10px);
 }
 
-/* RESULT CARD */
-.result {
-  max-width: 700px;
-  margin: 40px auto;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(10px);
-  padding: 25px;
-  border-radius: 16px;
-  display: none;
+/* SEARCH CARDS */
+.card {
+  padding:14px;
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:12px;
+  margin-bottom:10px;
+  background:rgba(255,255,255,0.03);
 }
 
-.result-top {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-  opacity: 0.8;
+.small {
+  opacity:0.6;
+  font-size:13px;
 }
 
-.result img {
-  max-width: 100%;
-  border-radius: 10px;
-  margin-top: 10px;
+/* CHAT */
+.chat {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
 
-/* FOOTER */
-.footer {
-  text-align: center;
-  margin-top: 80px;
-  opacity: 0.4;
-  font-size: 14px;
+.msg {
+  padding:12px;
+  border-radius:12px;
+}
+
+.user {
+  background:#3b82f6;
+  align-self:flex-end;
+}
+
+.ai {
+  background:#1e293b;
+  align-self:flex-start;
 }
 </style>
 </head>
 
 <body>
 
-<!-- NAV -->
 <div class="nav">
-  <div class="logo">NorthSky</div>
-  <div class="nav-links">Intelligence</div>
-</div>
+  <div class="logo">NorthSky AI</div>
 
-<!-- HERO -->
-<div class="hero">
-  <h1>Analyze Any Website</h1>
-  <p>Extract metadata, previews, and insights instantly</p>
-
-  <div class="search-box">
-    <input id="urlInput" placeholder="Enter a website (example.com)" />
-    <button onclick="analyze()">Analyze</button>
+  <div class="tabs">
+    <div class="tab active" onclick="setMode('analyze')">Analyze</div>
+    <div class="tab" onclick="setMode('search')">Search</div>
+    <div class="tab" onclick="setMode('ask')">Ask</div>
   </div>
 </div>
 
-<!-- RESULT -->
-<div id="result" class="result"></div>
-
-<!-- FOOTER -->
-<div class="footer">
-  © NorthSky Systems
+<div class="hero">
+  <h1>NorthSky AI Platform</h1>
+  <p>Analyze • Search • Ask Anything</p>
 </div>
 
+<div class="box">
+  <input id="input" placeholder="Enter URL, search, or question..." />
+  <button onclick="run()">Run</button>
+</div>
+
+<div id="output" class="output"></div>
+
 <script>
-async function analyze() {
-  const input = document.getElementById("urlInput").value.trim();
-  const resultBox = document.getElementById("result");
 
-  if (!input) {
-    alert("Enter a URL");
-    return;
-  }
+let mode = "analyze";
 
-  resultBox.style.display = "block";
-  resultBox.innerHTML = "⏳ Analyzing...";
+function setMode(m){
+  mode = m;
+
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  event.target.classList.add("active");
+
+  document.getElementById("output").style.display = "none";
+  document.getElementById("output").innerHTML = "";
+}
+
+/* MAIN ROUTER */
+async function run(){
+  const input = document.getElementById("input").value.trim();
+  const out = document.getElementById("output");
+
+  if(!input) return;
+
+  out.style.display = "block";
+  out.innerHTML = "⏳ Processing...";
 
   try {
-    const res = await fetch(`/api/rip?url=${encodeURIComponent(input)}`);
-    const data = await res.json();
 
-    if (!data.success) {
-      resultBox.innerHTML = "❌ Failed to fetch data";
-      return;
+    /* ================= ANALYZE MODE ================= */
+    if(mode === "analyze"){
+      const res = await fetch(`/api/rip?url=${encodeURIComponent(input)}`);
+      const data = await res.json();
+
+      if(!data.success){
+        out.innerHTML = "❌ Failed";
+        return;
+      }
+
+      const m = data.metadata;
+
+      out.innerHTML = `
+        <h2>${m.title}</h2>
+        <p class="small">${m.site}</p>
+        <p>${m.description}</p>
+        ${m.image ? `<img src="${m.image}" style="width:100%;border-radius:12px;margin-top:10px;">` : ""}
+      `;
     }
 
-    const m = data.metadata;
+    /* ================= SEARCH MODE ================= */
+    if(mode === "search"){
+      const res = await fetch(`/api/search?q=${encodeURIComponent(input)}`);
+      const data = await res.json();
 
-    resultBox.innerHTML = `
-      <div class="result-top">
-        <img src="${m.favicon}" width="20" height="20"/>
-        <span>${m.site}</span>
-      </div>
+      if(!data.results){
+        out.innerHTML = "❌ No results";
+        return;
+      }
 
-      <h2>${m.title}</h2>
-      <p style="opacity:0.7;">${m.description}</p>
+      out.innerHTML = `<h3>Search Results</h3>`;
 
-      ${m.image ? `<img src="${m.image}" />` : ""}
-    `;
-  } catch {
-    resultBox.innerHTML = "❌ Error connecting to API";
+      data.results.forEach(r=>{
+        out.innerHTML += `
+          <div class="card">
+            <strong>${r.title || "Result"}</strong>
+            <div class="small">${r.site || r.url}</div>
+            <p class="small">${r.description || ""}</p>
+          </div>
+        `;
+      });
+    }
+
+    /* ================= ASK MODE ================= */
+    if(mode === "ask"){
+      const res = await fetch(`/api/ask?q=${encodeURIComponent(input)}`);
+      const data = await res.json();
+
+      out.innerHTML = `
+        <div class="chat">
+          <div class="msg user">${input}</div>
+          <div class="msg ai">${JSON.stringify(data, null, 2)}</div>
+        </div>
+      `;
+    }
+
+  } catch(e){
+    out.innerHTML = "❌ Error connecting to server";
   }
 }
 
-/* ENTER KEY SUPPORT */
-document.getElementById("urlInput").addEventListener("keypress", function(e) {
-  if (e.key === "Enter") analyze();
+/* ENTER SUPPORT */
+document.getElementById("input").addEventListener("keypress",(e)=>{
+  if(e.key==="Enter") run();
 });
+
 </script>
 
 </body>
