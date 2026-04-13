@@ -1,135 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NorthSky AI</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NorthSky | Skymaster X1</title>
 
 <style>
 :root{
   --bg:#05060a;
-  --glass:rgba(255,255,255,0.04);
-  --border:rgba(148,163,184,0.18);
+  --card:rgba(255,255,255,0.04);
+  --border:rgba(148,163,184,0.15);
   --accent:#38bdf8;
+  --text:#ffffff;
+  --muted:rgba(255,255,255,0.65);
   --green:#22c55e;
-  --text:#e2e8f0;
-  --muted:rgba(255,255,255,0.62);
 }
 
-*{margin:0;padding:0;box-sizing:border-box;}
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
 
 body{
-  font-family:Inter,system-ui;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter",Arial;
   background:
-    radial-gradient(circle at 15% 10%, rgba(56,189,248,0.14), transparent 55%),
-    radial-gradient(circle at 85% 20%, rgba(34,197,94,0.10), transparent 55%),
+    radial-gradient(circle at 20% 10%, rgba(56,189,248,0.12), transparent 45%),
+    radial-gradient(circle at 80% 20%, rgba(34,197,94,0.10), transparent 45%),
     var(--bg);
   color:var(--text);
-}
-
-/* NAV */
-.nav{
   display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:22px 40px;
+  justify-content:center;
+  padding:50px 20px;
 }
 
-.logo{
-  font-weight:800;
-  letter-spacing:-0.6px;
-}
-
-.badge{
-  padding:6px 12px;
-  border-radius:999px;
-  border:1px solid var(--border);
-  font-size:12px;
-  color:var(--muted);
-}
-
-/* LAYOUT */
 .container{
-  max-width:980px;
-  margin:auto;
-  padding:40px 20px 80px;
+  width:100%;
+  max-width:900px;
 }
 
-/* HERO (UPGRADED LIKE UTILITIES) */
-.hero{
-  margin-bottom:20px;
+/* HEADER */
+h1{
+  font-size:34px;
+  letter-spacing:-0.5px;
 }
 
-.hero h1{
-  font-size:46px;
-  font-weight:800;
-  letter-spacing:-1px;
-}
-
-.hero p{
-  margin-top:10px;
+.sub{
   color:var(--muted);
-  max-width:700px;
-  line-height:1.6;
+  margin-top:6px;
 }
 
 /* CARD */
 .card{
-  background:var(--glass);
+  background:var(--card);
   border:1px solid var(--border);
-  border-radius:20px;
-  padding:18px;
-  backdrop-filter:blur(16px);
-  margin-top:16px;
-}
-
-/* INPUT */
-.input-box{
-  display:flex;
-  gap:10px;
-}
-
-input{
-  flex:1;
-  padding:14px;
-  border-radius:12px;
-  border:1px solid var(--border);
-  background:rgba(0,0,0,0.25);
-  color:var(--text);
-}
-
-button{
-  padding:12px 18px;
-  border-radius:12px;
-  border:none;
-  background:linear-gradient(135deg,var(--accent),#6366f1);
-  color:white;
-  font-weight:700;
-  cursor:pointer;
-}
-
-/* SYSTEM PANEL (NEW STRUCTURE) */
-.panel{
-  margin-top:18px;
-  padding:18px;
   border-radius:18px;
-  border:1px solid var(--border);
-  background:rgba(255,255,255,0.03);
+  padding:18px;
+  backdrop-filter:blur(14px);
+  margin-top:14px;
 }
 
-/* SCORE BAR */
-.bar{
-  height:10px;
-  background:#1e293b;
+/* HERO IMAGE */
+.hero img{
+  width:100%;
+  height:320px;
+  object-fit:cover;
+  border-radius:16px;
+  margin-top:14px;
+}
+
+/* PRICE */
+.price{
+  font-size:30px;
+  font-weight:700;
+  color:var(--green);
+}
+
+.old{
+  text-decoration:line-through;
+  color:var(--muted);
+  font-size:14px;
+}
+
+/* BUTTON */
+button{
+  width:100%;
+  padding:12px;
+  margin-top:12px;
   border-radius:999px;
-  overflow:hidden;
-  margin-top:8px;
+  border:none;
+  background:var(--accent);
+  color:#000;
+  font-weight:600;
+  cursor:pointer;
+  transition:0.2s;
 }
 
-.fill{
-  height:100%;
-  width:0%;
-  background:linear-gradient(90deg,var(--accent),var(--green));
+button:hover{
+  transform:translateY(-2px);
 }
 
 /* GRID */
@@ -150,159 +118,96 @@ button{
 .metric h3{
   font-size:12px;
   color:var(--muted);
+  margin-bottom:6px;
 }
 
-.metric .val{
+.metric .value{
   font-size:18px;
   font-weight:700;
-  margin-top:6px;
+  color:var(--accent);
 }
 
-/* INSIGHTS STACK (UTILITIES STYLE) */
-.insights{
-  margin-top:14px;
-  display:grid;
-  gap:10px;
-}
-
-.insight{
-  padding:14px;
-  border-radius:14px;
-  border:1px solid var(--border);
-  background:rgba(255,255,255,0.03);
-  font-size:13px;
+/* TEXT */
+p{
   color:var(--muted);
-}
-
-/* IMAGE */
-.preview-img{
-  width:100%;
-  border-radius:14px;
-  margin-bottom:10px;
-}
-
-/* SMALL */
-.small{
-  color:var(--muted);
-  font-size:13px;
   margin-top:6px;
+  line-height:1.5;
+}
+
+.highlight{
+  color:var(--green);
+  font-weight:600;
 }
 </style>
 </head>
 
 <body>
 
-<div class="nav">
-  <div class="logo">🧠 NorthSky AI</div>
-  <div class="badge">Silicon Engine</div>
-</div>
-
 <div class="container">
 
-  <div class="hero">
-    <h1>Website Intelligence Engine</h1>
-    <p>AI-grade analysis for SEO, UX, trust signals, and structural optimization — built as a SaaS intelligence layer.</p>
+<h1>🚁 Skymaster X1 Drone</h1>
+<p class="sub">Cinematic 4K drone system built for creators & beginners</p>
+
+<!-- HERO -->
+<div class="card hero">
+  <img src="https://images.unsplash.com/photo-1506947411487-a56738267384?auto=format&fit=crop&w=1200&q=80">
+
+  <div style="margin-top:12px;">
+    <div class="old">$1299</div>
+    <div class="price">$899</div>
+
+    <p>
+      4K Camera • 25min Flight • GPS Auto Return • Beginner Friendly Stabilization
+    </p>
+
+    <a href="https://buy.stripe.com/9B6eV64qDcT20xpeDC2ZO0i">
+      <button>🚀 Get Skymaster X1</button>
+    </a>
+
+    <p class="highlight">🔥 Limited stock — selling fast</p>
   </div>
-
-  <div class="card">
-    <div class="input-box">
-      <input id="urlInput" placeholder="https://example.com" />
-      <button onclick="runAI()">Analyze</button>
-    </div>
-    <div class="small">Real-time AI inspection system</div>
-  </div>
-
-  <div id="output" class="card small">Waiting for analysis...</div>
-
 </div>
 
-<script>
-const API = "https://northsky-ai.onrender.com";
+<!-- FEATURES -->
+<div class="card">
+  <h2>Why it stands out</h2>
 
-async function safeFetch(url){
-  try{
-    const res = await fetch(url);
-    return await res.json();
-  }catch(e){
-    return {success:false};
-  }
-}
-
-function loadingUI(){
-  document.getElementById("output").innerHTML =
-    `<div class="panel">Analyzing system...</div>`;
-}
-
-async function runAI(){
-  let url = document.getElementById("urlInput").value.trim();
-  if(!url) return;
-
-  loadingUI();
-
-  const data = await safeFetch(
-    `${API}/api/rip?url=${encodeURIComponent(url)}`
-  );
-
-  render(data);
-}
-
-function render(data){
-  const meta = data.metadata;
-
-  if(!data.success || !meta){
-    document.getElementById("output").innerHTML =
-      "❌ Analysis failed";
-    return;
-  }
-
-  const score = calc(meta);
-
-  document.getElementById("output").innerHTML = `
-    ${meta.image ? `<img class="preview-img" src="${meta.image}"/>` : ""}
-
-    <h2>${meta.title || "No title"}</h2>
-    <div class="small">${meta.description || ""}</div>
-
-    <div class="panel">
-      <h3>System Score: ${score}/10</h3>
-      <div class="bar">
-        <div class="fill" style="width:${score*10}%"></div>
-      </div>
+  <div class="grid">
+    <div class="metric">
+      <h3>Camera</h3>
+      <div class="value">4K UHD</div>
     </div>
 
-    <div class="grid">
-      <div class="metric">
-        <h3>SEO</h3>
-        <div class="val">${score >= 7 ? "Strong" : "Weak"}</div>
-      </div>
-
-      <div class="metric">
-        <h3>UX</h3>
-        <div class="val">${meta.image ? "Good" : "Weak"}</div>
-      </div>
-
-      <div class="metric">
-        <h3>Trust</h3>
-        <div class="val">${meta.description ? "High" : "Low"}</div>
-      </div>
+    <div class="metric">
+      <h3>Flight Time</h3>
+      <div class="value">25 min</div>
     </div>
 
-    <div class="insights">
-      <div class="insight">💡 Improve metadata depth for stronger indexing signals</div>
-      <div class="insight">⚡ Add structured schema (JSON-LD) for AI visibility</div>
-      <div class="insight">🔒 Improve trust signals (SSL, branding, consistency)</div>
+    <div class="metric">
+      <h3>Safety</h3>
+      <div class="value">GPS Return</div>
     </div>
-  `;
-}
+  </div>
 
-function calc(meta){
-  let s = 5;
-  if(meta.title?.length > 10) s+=2;
-  if(meta.description?.length > 50) s+=2;
-  if(meta.image) s+=1;
-  return Math.min(s,10);
-}
-</script>
+  <p>Designed for smooth cinematic footage with zero learning curve.</p>
+</div>
+
+<!-- BENEFITS -->
+<div class="card">
+  <h2>What users love</h2>
+  <p>✔ Extremely easy to fly</p>
+  <p>✔ Stable cinematic footage</p>
+  <p>✔ Smart return-to-home safety</p>
+</div>
+
+<!-- REVIEWS -->
+<div class="card">
+  <h2>Customer feedback</h2>
+  <p>“Insane footage quality for the price.”</p>
+  <p>“I had it flying in minutes.”</p>
+</div>
+
+</div>
 
 </body>
 </html>
