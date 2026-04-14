@@ -1,3 +1,8 @@
+"scripts": {
+  "start": "node index.js"
+}
+
+
 {
   "name": "northsky-api",
   "version": "1.0.0",
