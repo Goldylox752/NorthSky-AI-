@@ -9,7 +9,6 @@ export const config = {
 };
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const supabase = createClient(
@@ -38,13 +37,12 @@ export default async function handler(req, res) {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // 💰 PAYMENT SUCCESS
+  // ==============================
+  // 💰 SUCCESSFUL PAYMENT
+  // ==============================
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
 
-    console.log("💰 PAYMENT SUCCESS:", session.id);
-
-    // safer email extraction
     const email =
       session.customer_details?.email ||
       session.customer_email;
@@ -54,17 +52,18 @@ export default async function handler(req, res) {
       return res.status(200).json({ received: true });
     }
 
-    // 🔑 Generate API key
+    // 🔑 generate API key
     const apiKey = crypto.randomBytes(32).toString('hex');
 
-    // 💾 Store in Supabase
+    // 💾 store user in Supabase
     const { error } = await supabase.from('api_keys').insert({
       stripe_session_id: session.id,
+      email,
       user_id: email,
-      email: email,
       api_key: apiKey,
       plan: 'pro',
-      usage: 0
+      usage: 0,
+      request_limit: 1000 // ✅ FIXED (important)
     });
 
     if (error) {
@@ -73,20 +72,28 @@ export default async function handler(req, res) {
       console.log("🔥 API KEY CREATED:", apiKey);
     }
 
-    // ✉️ Send email
+    // ✉️ send email
     try {
       await resend.emails.send({
         from: 'NorthSky <onboarding@resend.dev>',
         to: email,
         subject: 'Your NorthSky API Key 🚀',
         html: `
-          <h2>Welcome to NorthSky AI</h2>
-          <p>Your API key is ready:</p>
-          <pre style="background:#111;padding:12px;border-radius:8px;color:#00ff88;">
+          <div style="font-family:Arial;">
+            <h2>Welcome to NorthSky AI 🚀</h2>
+            <p>Your API key is ready:</p>
+
+            <pre style="background:#111;padding:12px;border-radius:8px;color:#00ff88;">
 ${apiKey}
-          </pre>
-          <p>Use this key in your app to unlock full access.</p>
-          <p><a href="https://north-sky-ai.vercel.app">Open App</a></p>
+            </pre>
+
+            <p><b>Keep this safe — it gives access to your AI usage.</b></p>
+
+            <a href="https://north-sky-ai.vercel.app"
+               style="display:inline-block;margin-top:10px;padding:10px 16px;background:#000;color:#fff;text-decoration:none;border-radius:6px;">
+               Open Dashboard
+            </a>
+          </div>
         `
       });
 
