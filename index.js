@@ -10,46 +10,51 @@ require("dotenv").config();
 
 const app = express();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 const PORT = process.env.PORT || 3000;
+
+/* ================= RAW WEBHOOK (MUST BE FIRST) ================= */
+app.post(
+  "/api/webhook",
+  express.raw({ type: "application/json" }),
+  (req, res) => {
+    const sig = req.headers["stripe-signature"];
+
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const apiKey = session.metadata?.apiKey;
+
+      if (apiKey && users.has(apiKey)) {
+        const user = users.get(apiKey);
+
+        user.plan = "pro";
+        user.limit = 1000;
+        user.usage = 0;
+
+        users.set(apiKey, user);
+
+        console.log("💳 PRO UPGRADE:", apiKey);
+      }
+    }
+
+    res.json({ received: true });
+  }
+);
 
 /* ================= MIDDLEWARE ================= */
 app.use(cors());
 app.use(express.json());
-
-/* Stripe webhook MUST use raw body */
-app.post("/api/webhook", express.raw({ type: "application/json" }), (req, res) => {
-  const sig = req.headers["stripe-signature"];
-
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-    const apiKey = session.metadata?.apiKey;
-
-    if (apiKey && users.has(apiKey)) {
-      const user = users.get(apiKey);
-
-      user.plan = "pro";
-      user.limit = 1000;
-      user.usage = 0;
-
-      users.set(apiKey, user);
-      console.log("💳 Upgraded to PRO:", apiKey);
-    }
-  }
-
-  res.json({ received: true });
-});
 
 /* ================= USERS DB ================= */
 const users = new Map();
@@ -83,7 +88,7 @@ app.post("/api/create-user", (req, res) => {
   });
 });
 
-/* ================= AUTH MIDDLEWARE ================= */
+/* ================= AUTH + LIMIT MIDDLEWARE ================= */
 function requireAuth(req, res, next) {
   const apiKey = req.headers["x-api-key"];
 
@@ -107,7 +112,7 @@ function requireAuth(req, res, next) {
   next();
 }
 
-/* ================= STRIPE CHECKOUT ($29/month) ================= */
+/* ================= STRIPE CHECKOUT ($29/MO) ================= */
 app.post("/api/subscribe", async (req, res) => {
   const { apiKey } = req.body;
 
@@ -123,7 +128,7 @@ app.post("/api/subscribe", async (req, res) => {
         price_data: {
           currency: "usd",
           product_data: {
-            name: "NorthSky AI Auditor Pro"
+            name: "NorthSky AI Pro ($29/month)"
           },
           unit_amount: 2900,
           recurring: {
@@ -197,8 +202,7 @@ function parseHTML(html, url) {
       "Untitled",
 
     description:
-      $("meta[name='description']").attr("content") ||
-      "",
+      $("meta[name='description']").attr("content") || "",
 
     image:
       $("meta[property='og:image']").attr("content") || null,
@@ -207,18 +211,7 @@ function parseHTML(html, url) {
   };
 }
 
-/* ================= SCRAPER ================= */
-async function scrape(url) {
-  const html = await fetchHTML(url);
-  if (!html) return { success: false };
-
-  return {
-    success: true,
-    metadata: parseHTML(html, url)
-  };
-}
-
-/* ================= AI SCORING ================= */
+/* ================= ANALYSIS ENGINE ================= */
 function analyze(html, url) {
   const $ = cheerio.load(html);
 
@@ -229,7 +222,9 @@ function analyze(html, url) {
   const links = $("a").length;
   const ssl = url.startsWith("https");
 
-  let seo = 50, ux = 50, conv = 50;
+  let seo = 50;
+  let ux = 50;
+  let conv = 50;
 
   if (title.length > 10) seo += 15;
   if (desc.length > 20) seo += 15;
@@ -245,6 +240,17 @@ function analyze(html, url) {
     seo: Math.min(seo, 100),
     ux: Math.min(ux, 100),
     conv: Math.min(conv, 100)
+  };
+}
+
+/* ================= SCRAPE ================= */
+async function scrape(url) {
+  const html = await fetchHTML(url);
+  if (!html) return { success: false, error: "fetch_failed" };
+
+  return {
+    success: true,
+    metadata: parseHTML(html, url)
   };
 }
 
@@ -266,7 +272,7 @@ app.get("/api/rip", async (req, res) => {
   res.json(result);
 });
 
-/* ANALYZE (PROTECTED - THIS IS YOUR PAID ENDPOINT) */
+/* ANALYZE (PROTECTED) */
 app.post("/api/analyze", requireAuth, async (req, res) => {
   const url = normalizeURL(req.body.site);
   if (!url) return res.status(400).json({ error: "invalid_url" });
@@ -289,7 +295,7 @@ Conversion Score: ${scores.conv}/100
   });
 });
 
-/* USER INFO */
+/* USER STATUS */
 app.get("/api/me", (req, res) => {
   const apiKey = req.headers["x-api-key"];
 
@@ -318,5 +324,5 @@ app.get("/health", (req, res) => {
 
 /* ================= START ================= */
 app.listen(PORT, () => {
-  console.log(`🚀 NorthSky OS v3 SaaS running on ${PORT}`);
+  console.log(`🚀 NorthSky OS SaaS v3 running on port ${PORT}`);
 });
