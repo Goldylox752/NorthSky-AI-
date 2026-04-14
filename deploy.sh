@@ -1,51 +1,67 @@
-# ... existing config ...
-SENTRY_DSN="https://sentry.io"
-
-# ... inside the config setting block ...
-echo "🔐 Setting Sentry DSN..."
-heroku config:set SENTRY_DSN=$SENTRY_DSN
-
-
 #!/bin/bash
+set -e
 
-# --- CONFIGURATION ---
-APP_NAME="my-ripper-engine-$(date +%s)" # Generates a unique name
-ADMIN_EMAIL="Goldylox752@zohomailcloud.caw"
-API_KEY="your-secret-key-123"
+# --- Configuration ---
+# All sensitive values MUST be set as environment variables before running this script.
+# Example: export API_KEY="real-key" && ./deploy.sh
+# Or use a .env file (never committed) with: source .env && ./deploy.sh
 
-echo "🚀 Starting Deployment for $APP_NAME..."
+APP_NAME="${HEROKU_APP_NAME:-my-ripper-engine-$(date +%s)}"
+echo "🚀 Starting deployment for $APP_NAME..."
 
-# 1. Login to Heroku (Opens browser if not logged in)
+# --- Required environment variables (no defaults!) ---
+REQUIRED_VARS=(
+  "ADMIN_EMAIL"
+  "API_KEY"
+  "SENTRY_DSN"
+  "REDIS_URL"          # Will be set by Heroku add-on, but check after provisioning
+)
+
+# Check they are set
+MISSING=()
+for var in "${REQUIRED_VARS[@]}"; do
+  if [ -z "${!var}" ]; then
+    MISSING+=("$var")
+  fi
+done
+
+if [ ${#MISSING[@]} -ne 0 ]; then
+  echo "❌ Missing required environment variables:"
+  printf '  %s\n' "${MISSING[@]}"
+  echo "Please set them (e.g., export API_KEY=...) and re-run."
+  exit 1
+fi
+
+# --- Heroku login (will open browser if needed) ---
 heroku login
 
-# 2. Create the Heroku App
-heroku create $APP_NAME
+# --- Create Heroku app ---
+heroku create "$APP_NAME"
 
-# 3. Add Redis (Free 30MB instance)
+# --- Provision add-ons ---
 echo "📦 Provisioning Redis..."
-heroku addons:create rediscloud:30
+heroku addons:create rediscloud:30 --app "$APP_NAME"
 
-# 4. Add SendGrid (Free 100 emails/day)
 echo "✉️ Provisioning SendGrid..."
-heroku addons:create sendgrid:starter
+heroku addons:create sendgrid:starter --app "$APP_NAME"
 
-# 5. Set Environment Variables
-echo "🔐 Setting Config Vars..."
-heroku config:set ADMIN_EMAIL=$ADMIN_EMAIL
-heroku config:set API_KEY=$API_KEY
-heroku config:set NODE_ENV=production
+# --- Set config vars (safely from environment) ---
+echo "🔐 Setting config vars..."
+heroku config:set \
+  ADMIN_EMAIL="$ADMIN_EMAIL" \
+  API_KEY="$API_KEY" \
+  SENTRY_DSN="$SENTRY_DSN" \
+  NODE_ENV="production" \
+  --app "$APP_NAME"
 
-# 6. Deploy Code
+# --- Deploy code ---
 echo "📤 Pushing code to Heroku..."
-git add .
-git commit -m "Production deployment with workers and dashboard"
 git push heroku main
 
-# 7. Scale Workers
-# This is crucial! Web runs by default, but Worker must be manually scaled.
+# --- Scale worker dyno ---
 echo "⚙️ Scaling background worker..."
-heroku ps:scale worker=1
+heroku ps:scale worker=1 --app "$APP_NAME"
 
-# 8. Open Dashboard
-echo "✅ Deployment Complete!"
-heroku open
+# --- Open the app ---
+echo "✅ Deployment complete!"
+heroku open --app "$APP_NAME"
