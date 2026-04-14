@@ -8,9 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
 <style>
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -27,22 +25,17 @@ body {
   font-weight:600;
 }
 
-.logo {
-  font-size:18px;
-}
+.logo { font-size:18px; }
 
-.tabs {
-  display:flex;
-  gap:10px;
-}
+.tabs { display:flex; gap:10px; }
 
 .tab {
   padding:8px 14px;
   border-radius:10px;
   cursor:pointer;
   opacity:0.6;
-  transition:0.2s;
   border:1px solid transparent;
+  transition:0.2s;
 }
 
 .tab.active {
@@ -57,19 +50,16 @@ body {
   margin-top:80px;
 }
 
-.hero h1 {
-  font-size:42px;
-}
-
-.hero p {
-  opacity:0.6;
-}
+.hero h1 { font-size:42px; }
+.hero p { opacity:0.6; }
 
 /* INPUT */
 .box {
   display:flex;
   justify-content:center;
   margin-top:25px;
+  gap:10px;
+  padding:0 20px;
 }
 
 .box input {
@@ -84,7 +74,6 @@ body {
 
 .box button {
   padding:16px 20px;
-  margin-left:10px;
   border-radius:12px;
   border:none;
   background:#3b82f6;
@@ -104,7 +93,7 @@ body {
   backdrop-filter:blur(10px);
 }
 
-/* SEARCH CARDS */
+/* CARDS */
 .card {
   padding:14px;
   border:1px solid rgba(255,255,255,0.1);
@@ -128,6 +117,7 @@ body {
 .msg {
   padding:12px;
   border-radius:12px;
+  max-width:80%;
 }
 
 .user {
@@ -139,6 +129,11 @@ body {
   background:#1e293b;
   align-self:flex-start;
 }
+
+/* LOADING */
+.loading {
+  opacity:0.7;
+}
 </style>
 </head>
 
@@ -148,9 +143,9 @@ body {
   <div class="logo">NorthSky AI</div>
 
   <div class="tabs">
-    <div class="tab active" onclick="setMode('analyze')">Analyze</div>
-    <div class="tab" onclick="setMode('search')">Search</div>
-    <div class="tab" onclick="setMode('ask')">Ask</div>
+    <div class="tab active" data-mode="analyze">Analyze</div>
+    <div class="tab" data-mode="search">Search</div>
+    <div class="tab" data-mode="ask">Ask</div>
   </div>
 </div>
 
@@ -170,17 +165,20 @@ body {
 
 let mode = "analyze";
 
-function setMode(m){
-  mode = m;
+/* TAB SWITCH */
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click",(e)=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    mode = tab.dataset.mode;
 
-  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-  event.target.classList.add("active");
+    const out = document.getElementById("output");
+    out.style.display = "none";
+    out.innerHTML = "";
+  });
+});
 
-  document.getElementById("output").style.display = "none";
-  document.getElementById("output").innerHTML = "";
-}
-
-/* MAIN ROUTER */
+/* MAIN RUNNER */
 async function run(){
   const input = document.getElementById("input").value.trim();
   const out = document.getElementById("output");
@@ -192,13 +190,13 @@ async function run(){
 
   try {
 
-    /* ================= ANALYZE MODE ================= */
+    /* ================= ANALYZE ================= */
     if(mode === "analyze"){
       const res = await fetch(`/api/rip?url=${encodeURIComponent(input)}`);
       const data = await res.json();
 
       if(!data.success){
-        out.innerHTML = "❌ Failed";
+        out.innerHTML = "❌ Failed to analyze";
         return;
       }
 
@@ -207,12 +205,12 @@ async function run(){
       out.innerHTML = `
         <h2>${m.title}</h2>
         <p class="small">${m.site}</p>
-        <p>${m.description}</p>
+        <p>${m.description || ""}</p>
         ${m.image ? `<img src="${m.image}" style="width:100%;border-radius:12px;margin-top:10px;">` : ""}
       `;
     }
 
-    /* ================= SEARCH MODE ================= */
+    /* ================= SEARCH ================= */
     if(mode === "search"){
       const res = await fetch(`/api/search?q=${encodeURIComponent(input)}`);
       const data = await res.json();
@@ -235,7 +233,7 @@ async function run(){
       });
     }
 
-    /* ================= ASK MODE ================= */
+    /* ================= ASK ================= */
     if(mode === "ask"){
       const res = await fetch(`/api/ask?q=${encodeURIComponent(input)}`);
       const data = await res.json();
@@ -243,17 +241,17 @@ async function run(){
       out.innerHTML = `
         <div class="chat">
           <div class="msg user">${input}</div>
-          <div class="msg ai">${JSON.stringify(data, null, 2)}</div>
+          <div class="msg ai">${data.answer || JSON.stringify(data)}</div>
         </div>
       `;
     }
 
   } catch(e){
-    out.innerHTML = "❌ Error connecting to server";
+    out.innerHTML = "❌ Server error";
   }
 }
 
-/* ENTER SUPPORT */
+/* ENTER KEY */
 document.getElementById("input").addEventListener("keypress",(e)=>{
   if(e.key==="Enter") run();
 });
