@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>NorthSky AI Platform v3</title>
+<title>NorthSky AI Platform v3 Pro</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
@@ -17,7 +17,7 @@ body {
   color: white;
 }
 
-/* NAV */
+/* TOP BAR */
 .nav {
   display:flex;
   justify-content:space-between;
@@ -27,27 +27,18 @@ body {
 
 .logo { font-size:18px; }
 
-.tabs { display:flex; gap:10px; }
-
-.tab {
-  padding:8px 14px;
-  border-radius:10px;
-  cursor:pointer;
-  opacity:0.6;
-  border:1px solid transparent;
-  transition:0.2s;
-}
-
-.tab.active {
-  opacity:1;
-  border:1px solid #3b82f6;
-  background:rgba(59,130,246,0.15);
+.badge {
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.2);
+  font-size:12px;
+  opacity:0.8;
 }
 
 /* HERO */
 .hero {
   text-align:center;
-  margin-top:80px;
+  margin-top:70px;
 }
 
 .hero h1 { font-size:42px; }
@@ -69,7 +60,6 @@ body {
   border:none;
   background:#0f172a;
   color:white;
-  outline:none;
 }
 
 .box button {
@@ -90,21 +80,22 @@ body {
   background:rgba(15,23,42,0.6);
   border-radius:16px;
   display:none;
-  backdrop-filter:blur(10px);
 }
 
-/* CARDS */
-.card {
-  padding:14px;
-  border:1px solid rgba(255,255,255,0.1);
+/* LOCK SCREEN */
+.lock {
+  text-align:center;
+  margin-top:60px;
+}
+
+.lock button {
+  padding:14px 18px;
   border-radius:12px;
-  margin-bottom:10px;
-  background:rgba(255,255,255,0.03);
-}
-
-.small {
-  opacity:0.6;
-  font-size:13px;
+  border:none;
+  background:#22c55e;
+  color:black;
+  font-weight:700;
+  cursor:pointer;
 }
 
 /* CHAT */
@@ -117,22 +108,30 @@ body {
 .msg {
   padding:12px;
   border-radius:12px;
-  max-width:80%;
 }
 
-.user {
-  background:#3b82f6;
-  align-self:flex-end;
+.user { background:#3b82f6; align-self:flex-end; }
+.ai { background:#1e293b; align-self:flex-start; }
+
+.tabbar {
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  margin-top:20px;
 }
 
-.ai {
-  background:#1e293b;
-  align-self:flex-start;
+.tab {
+  padding:8px 14px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.2);
+  cursor:pointer;
+  opacity:0.6;
 }
 
-/* LOADING */
-.loading {
-  opacity:0.7;
+.tab.active {
+  opacity:1;
+  background:rgba(59,130,246,0.2);
+  border-color:#3b82f6;
 }
 </style>
 </head>
@@ -141,46 +140,72 @@ body {
 
 <div class="nav">
   <div class="logo">NorthSky AI</div>
+  <div class="badge" id="planBadge">FREE</div>
+</div>
 
-  <div class="tabs">
-    <div class="tab active" data-mode="analyze">Analyze</div>
-    <div class="tab" data-mode="search">Search</div>
-    <div class="tab" data-mode="ask">Ask</div>
+<!-- LOCKED VIEW -->
+<div id="locked" class="lock">
+  <h1>🔒 Pro Required</h1>
+  <p>Unlock NorthSky AI for $29/month</p>
+  <button onclick="subscribe()">Upgrade to Pro</button>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;">
+
+  <div class="tabbar">
+    <div class="tab active" onclick="mode='analyze'">Analyze</div>
+    <div class="tab" onclick="mode='search'">Search</div>
+    <div class="tab" onclick="mode='ask'">Ask</div>
   </div>
-</div>
 
-<div class="hero">
-  <h1>NorthSky AI Platform</h1>
-  <p>Analyze • Search • Ask Anything</p>
-</div>
+  <div class="hero">
+    <h1>NorthSky AI Platform</h1>
+    <p>Analyze • Search • Ask Anything</p>
+  </div>
 
-<div class="box">
-  <input id="input" placeholder="Enter URL, search, or question..." />
-  <button onclick="run()">Run</button>
-</div>
+  <div class="box">
+    <input id="input" placeholder="Enter URL or question..." />
+    <button onclick="run()">Run</button>
+  </div>
 
-<div id="output" class="output"></div>
+  <div id="output" class="output"></div>
+</div>
 
 <script>
 
+const STRIPE_URL = "https://buy.stripe.com/fZu8wI2iv5qA2Fx0MM2ZO0z";
+
 let mode = "analyze";
+let isPro = localStorage.getItem("northsky_pro") === "true";
 
-/* TAB SWITCH */
-document.querySelectorAll(".tab").forEach(tab=>{
-  tab.addEventListener("click",(e)=>{
-    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-    tab.classList.add("active");
-    mode = tab.dataset.mode;
+/* INIT */
+window.onload = () => {
+  if(isPro) unlockUI();
+};
 
-    const out = document.getElementById("output");
-    out.style.display = "none";
-    out.innerHTML = "";
-  });
-});
+/* SUBSCRIBE */
+function subscribe(){
+  window.location.href = STRIPE_URL;
+}
 
-/* MAIN RUNNER */
+/* AFTER PAYMENT (manual return trigger) */
+if(window.location.href.includes("success")){
+  localStorage.setItem("northsky_pro","true");
+  unlockUI();
+}
+
+/* UNLOCK UI */
+function unlockUI(){
+  document.getElementById("locked").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  document.getElementById("planBadge").innerText = "PRO";
+  isPro = true;
+}
+
+/* RUN */
 async function run(){
-  const input = document.getElementById("input").value.trim();
+  const input = document.getElementById("input").value;
   const out = document.getElementById("output");
 
   if(!input) return;
@@ -188,73 +213,24 @@ async function run(){
   out.style.display = "block";
   out.innerHTML = "⏳ Processing...";
 
-  try {
+  let endpoint = "";
 
-    /* ================= ANALYZE ================= */
-    if(mode === "analyze"){
-      const res = await fetch(`/api/rip?url=${encodeURIComponent(input)}`);
-      const data = await res.json();
+  if(mode === "analyze") endpoint = "/api/rip?url=" + encodeURIComponent(input);
+  if(mode === "search") endpoint = "/api/search?q=" + encodeURIComponent(input);
+  if(mode === "ask") endpoint = "/api/ask?q=" + encodeURIComponent(input);
 
-      if(!data.success){
-        out.innerHTML = "❌ Failed to analyze";
-        return;
-      }
+  const res = await fetch(endpoint);
+  const data = await res.json();
 
-      const m = data.metadata;
-
-      out.innerHTML = `
-        <h2>${m.title}</h2>
-        <p class="small">${m.site}</p>
-        <p>${m.description || ""}</p>
-        ${m.image ? `<img src="${m.image}" style="width:100%;border-radius:12px;margin-top:10px;">` : ""}
-      `;
-    }
-
-    /* ================= SEARCH ================= */
-    if(mode === "search"){
-      const res = await fetch(`/api/search?q=${encodeURIComponent(input)}`);
-      const data = await res.json();
-
-      if(!data.results){
-        out.innerHTML = "❌ No results";
-        return;
-      }
-
-      out.innerHTML = `<h3>Search Results</h3>`;
-
-      data.results.forEach(r=>{
-        out.innerHTML += `
-          <div class="card">
-            <strong>${r.title || "Result"}</strong>
-            <div class="small">${r.site || r.url}</div>
-            <p class="small">${r.description || ""}</p>
-          </div>
-        `;
-      });
-    }
-
-    /* ================= ASK ================= */
-    if(mode === "ask"){
-      const res = await fetch(`/api/ask?q=${encodeURIComponent(input)}`);
-      const data = await res.json();
-
-      out.innerHTML = `
-        <div class="chat">
-          <div class="msg user">${input}</div>
-          <div class="msg ai">${data.answer || JSON.stringify(data)}</div>
-        </div>
-      `;
-    }
-
-  } catch(e){
-    out.innerHTML = "❌ Server error";
+  if(mode === "ask"){
+    out.innerHTML = `<div class="chat">
+      <div class="msg user">${input}</div>
+      <div class="msg ai">${data.answer || JSON.stringify(data)}</div>
+    </div>`;
+  } else {
+    out.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
   }
 }
-
-/* ENTER KEY */
-document.getElementById("input").addEventListener("keypress",(e)=>{
-  if(e.key==="Enter") run();
-});
 
 </script>
 
