@@ -30,7 +30,11 @@ export default async function handler(req, res) {
     console.log("❌ Webhook error:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
-
+await supabase.from("profiles").upsert({
+  email,
+  plan: "pro",
+  request_limit: 1000
+});
   console.log("🔥 Stripe event:", event.type);
 
   // =========================
