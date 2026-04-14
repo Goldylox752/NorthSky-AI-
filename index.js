@@ -4,13 +4,144 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const crypto = require("crypto");
 const cors = require("cors");
+const Stripe = require("stripe");
+const { v4: uuidv4 } = require("uuid");
 require("dotenv").config();
 
 const app = express();
-app.use(express.json());
-app.use(cors());
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const PORT = process.env.PORT || 3000;
+
+/* ================= MIDDLEWARE ================= */
+app.use(cors());
+app.use(express.json());
+
+/* Stripe webhook MUST use raw body */
+app.post("/api/webhook", express.raw({ type: "application/json" }), (req, res) => {
+  const sig = req.headers["stripe-signature"];
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const apiKey = session.metadata?.apiKey;
+
+    if (apiKey && users.has(apiKey)) {
+      const user = users.get(apiKey);
+
+      user.plan = "pro";
+      user.limit = 1000;
+      user.usage = 0;
+
+      users.set(apiKey, user);
+      console.log("💳 Upgraded to PRO:", apiKey);
+    }
+  }
+
+  res.json({ received: true });
+});
+
+/* ================= USERS DB ================= */
+const users = new Map();
+
+/*
+User schema:
+{
+  apiKey,
+  plan: "free" | "pro",
+  usage: number,
+  limit: number
+}
+*/
+
+/* ================= CREATE USER ================= */
+app.post("/api/create-user", (req, res) => {
+  const apiKey = uuidv4();
+
+  users.set(apiKey, {
+    apiKey,
+    plan: "free",
+    usage: 0,
+    limit: 10
+  });
+
+  res.json({
+    success: true,
+    apiKey,
+    plan: "free",
+    limit: 10
+  });
+});
+
+/* ================= AUTH MIDDLEWARE ================= */
+function requireAuth(req, res, next) {
+  const apiKey = req.headers["x-api-key"];
+
+  if (!apiKey || !users.has(apiKey)) {
+    return res.status(401).json({ error: "invalid_api_key" });
+  }
+
+  const user = users.get(apiKey);
+
+  if (user.usage >= user.limit) {
+    return res.status(429).json({
+      error: "limit_reached",
+      plan: user.plan
+    });
+  }
+
+  user.usage++;
+  users.set(apiKey, user);
+
+  req.user = user;
+  next();
+}
+
+/* ================= STRIPE CHECKOUT ($29/month) ================= */
+app.post("/api/subscribe", async (req, res) => {
+  const { apiKey } = req.body;
+
+  if (!users.has(apiKey)) {
+    return res.status(400).json({ error: "invalid_user" });
+  }
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    payment_method_types: ["card"],
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: "NorthSky AI Auditor Pro"
+          },
+          unit_amount: 2900,
+          recurring: {
+            interval: "month"
+          }
+        },
+        quantity: 1
+      }
+    ],
+    metadata: {
+      apiKey
+    },
+    success_url: `${process.env.BASE_URL}/success`,
+    cancel_url: `${process.env.BASE_URL}/cancel`
+  });
+
+  res.json({ url: session.url });
+});
 
 /* ================= CACHE ================= */
 const cache = new Map();
@@ -19,12 +150,7 @@ const CACHE_TTL = 1000 * 60 * 30;
 function getCache(key) {
   const item = cache.get(key);
   if (!item) return null;
-
-  if (Date.now() - item.time > CACHE_TTL) {
-    cache.delete(key);
-    return null;
-  }
-
+  if (Date.now() - item.time > CACHE_TTL) return null;
   return item.data;
 }
 
@@ -36,20 +162,10 @@ function setCache(key, data) {
 function normalizeURL(input) {
   try {
     if (!input) return null;
-    input = input.trim();
     if (!input.startsWith("http")) input = "https://" + input;
     return new URL(input).toString();
   } catch {
     return null;
-  }
-}
-
-function isURL(str) {
-  try {
-    new URL(str.startsWith("http") ? str : "https://" + str);
-    return true;
-  } catch {
-    return false;
   }
 }
 
@@ -58,7 +174,6 @@ async function fetchHTML(url) {
   try {
     const res = await axios.get(url, {
       timeout: 12000,
-      maxRedirects: 5,
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
@@ -66,8 +181,7 @@ async function fetchHTML(url) {
     });
 
     return res.data;
-  } catch (err) {
-    console.log("FETCH ERROR:", err.message);
+  } catch {
     return null;
   }
 }
@@ -76,152 +190,133 @@ async function fetchHTML(url) {
 function parseHTML(html, url) {
   const $ = cheerio.load(html);
 
-  const title =
-    $("meta[property='og:title']").attr("content") ||
-    $("title").text().trim() ||
-    "Untitled";
+  return {
+    title:
+      $("meta[property='og:title']").attr("content") ||
+      $("title").text() ||
+      "Untitled",
 
-  const description =
-    $("meta[property='og:description']").attr("content") ||
-    $("meta[name='description']").attr("content") ||
-    $("p").first().text().trim().slice(0, 200) ||
-    "";
+    description:
+      $("meta[name='description']").attr("content") ||
+      "",
 
-  const image =
-    $("meta[property='og:image']").attr("content") || null;
+    image:
+      $("meta[property='og:image']").attr("content") || null,
 
-  const site = new URL(url).hostname.replace("www.", "");
-
-  return { title, description, image, site };
+    site: new URL(url).hostname.replace("www.", "")
+  };
 }
 
-/* ================= SCRAPER ENGINE ================= */
+/* ================= SCRAPER ================= */
 async function scrape(url) {
   const html = await fetchHTML(url);
-
-  if (!html) return { success: false, error: "fetch_failed" };
-
-  const metadata = parseHTML(html, url);
+  if (!html) return { success: false };
 
   return {
     success: true,
-    type: "scrape",
-    metadata,
+    metadata: parseHTML(html, url)
   };
 }
 
-/* ================= SEARCH ENGINE (MOCK) ================= */
-async function searchEngine(query) {
-  const urls = [
-    `https://www.google.com/search?q=${encodeURIComponent(query)}`,
-    `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
-    `https://www.bing.com/search?q=${encodeURIComponent(query)}`
-  ];
+/* ================= AI SCORING ================= */
+function analyze(html, url) {
+  const $ = cheerio.load(html);
 
-  const results = [];
+  const title = $("title").text();
+  const desc = $("meta[name='description']").attr("content") || "";
+  const h1 = $("h1").length;
+  const imgs = $("img").length;
+  const links = $("a").length;
+  const ssl = url.startsWith("https");
 
-  for (const url of urls) {
-    const data = await scrape(url);
+  let seo = 50, ux = 50, conv = 50;
 
-    if (data.success) {
-      results.push({
-        source: url,
-        ...data.metadata,
-      });
-    }
-  }
+  if (title.length > 10) seo += 15;
+  if (desc.length > 20) seo += 15;
+  if (h1 > 0) seo += 10;
 
-  return {
-    success: true,
-    type: "search",
-    query,
-    results,
-  };
-}
+  if (imgs > 0) ux += 15;
+  if (h1 > 0) ux += 10;
 
-/* ================= ASK ENGINE (SMART ROUTER) ================= */
-async function askEngine(input) {
-  if (isURL(input)) {
-    const url = normalizeURL(input);
-    return await scrape(url);
-  }
-
-  const search = await searchEngine(input);
+  if (links > 3) conv += 10;
+  if (ssl) conv += 10;
 
   return {
-    success: true,
-    type: "ask",
-    answer: `Results for: "${input}"`,
-    ...search,
+    seo: Math.min(seo, 100),
+    ux: Math.min(ux, 100),
+    conv: Math.min(conv, 100)
   };
 }
 
 /* ================= ROUTES ================= */
 
-/* 🔥 SCRAPE */
+/* SCRAPE */
 app.get("/api/rip", async (req, res) => {
   const url = normalizeURL(req.query.url);
-
-  if (!url) {
-    return res.status(400).json({ success: false, error: "invalid_url" });
-  }
+  if (!url) return res.status(400).json({ error: "invalid_url" });
 
   const key = crypto.createHash("md5").update(url).digest("hex");
 
   const cached = getCache(key);
-  if (cached) return res.json({ success: true, cached: true, ...cached });
+  if (cached) return res.json({ cached: true, ...cached });
 
   const result = await scrape(url);
 
-  if (!result.success) {
-    return res.status(500).json(result);
-  }
-
   setCache(key, result);
   res.json(result);
 });
 
-/* 🔍 SEARCH */
-app.get("/api/search", async (req, res) => {
-  const q = req.query.q;
+/* ANALYZE (PROTECTED - THIS IS YOUR PAID ENDPOINT) */
+app.post("/api/analyze", requireAuth, async (req, res) => {
+  const url = normalizeURL(req.body.site);
+  if (!url) return res.status(400).json({ error: "invalid_url" });
 
-  if (!q) {
-    return res.status(400).json({ success: false, error: "no_query" });
-  }
+  const html = await fetchHTML(url);
+  if (!html) return res.status(500).json({ error: "fetch_failed" });
 
-  const key = crypto.createHash("md5").update(q).digest("hex");
+  const meta = parseHTML(html, url);
+  const scores = analyze(html, url);
 
-  const cached = getCache(key);
-  if (cached) return res.json({ success: true, cached: true, ...cached });
-
-  const result = await searchEngine(q);
-
-  setCache(key, result);
-  res.json(result);
+  res.json({
+    success: true,
+    meta,
+    scores,
+    result: `
+SEO Score: ${scores.seo}/100
+UX Score: ${scores.ux}/100
+Conversion Score: ${scores.conv}/100
+    `.trim()
+  });
 });
 
-/* 🧠 ASK NORTHSKY (MAIN AI ENTRY) */
-app.get("/api/ask", async (req, res) => {
-  const input = req.query.q;
+/* USER INFO */
+app.get("/api/me", (req, res) => {
+  const apiKey = req.headers["x-api-key"];
 
-  if (!input) {
-    return res.status(400).json({ success: false, error: "no_input" });
+  if (!apiKey || !users.has(apiKey)) {
+    return res.status(401).json({ error: "invalid_user" });
   }
 
-  const result = await askEngine(input);
-  res.json(result);
+  const user = users.get(apiKey);
+
+  res.json({
+    plan: user.plan,
+    usage: user.usage,
+    limit: user.limit,
+    remaining: user.limit - user.usage
+  });
 });
 
-/* ================= HEALTH ================= */
+/* HEALTH */
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
-    uptime: process.uptime(),
-    cacheSize: cache.size,
+    users: users.size,
+    cache: cache.size
   });
 });
 
 /* ================= START ================= */
 app.listen(PORT, () => {
-  console.log(`🚀 NorthSky v2.1 running on port ${PORT}`);
+  console.log(`🚀 NorthSky OS v3 SaaS running on ${PORT}`);
 });
