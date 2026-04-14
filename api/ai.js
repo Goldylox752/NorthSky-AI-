@@ -13,12 +13,21 @@ const openai = new OpenAI({
 });
 
 // =======================
-// SIMPLE CACHE (in-memory)
+// SIMPLE CACHE
 // =======================
 const cache = new Map();
 
 function getCache(key) {
-  return cache.get(key);
+  const item = cache.get(key);
+  if (!item) return null;
+
+  // optional TTL (10 min)
+  if (Date.now() - item.time > 10 * 60 * 1000) {
+    cache.delete(key);
+    return null;
+  }
+
+  return item;
 }
 
 function setCache(key, value) {
@@ -29,82 +38,88 @@ function setCache(key, value) {
 }
 
 // =======================
-// DEEPSEEK
+// DEEPSEEK (SAFE)
 // =======================
 async function runDeepSeek(prompt) {
-  const res = await axios.post(
-    "https://api.deepseek.com/v1/chat/completions",
-    {
-      model: "deepseek-chat",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are an expert AI for business, SEO, UX, marketing, and SaaS growth."
-        },
-        { role: "user", content: prompt }
-      ],
-      temperature: 0.7
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      timeout: 20000
-    }
-  );
-
-  return res.data?.choices?.[0]?.message?.content;
-}
-
-// =======================
-// OPENAI FALLBACK
-// =======================
-async function runOpenAI(prompt) {
-  const res = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: "You are a reliable fallback AI assistant."
-      },
-      { role: "user", content: prompt }
-    ]
-  });
-
-  return res.choices?.[0]?.message?.content;
-}
-
-// =======================
-// AI ROUTER (CORE LOGIC)
-// =======================
-async function aiRouter(prompt) {
   try {
-    const deepseek = await runDeepSeek(prompt);
-
-    if (deepseek) {
-      return {
-        provider: "deepseek",
+    const res = await axios.post(
+      "https://api.deepseek.com/v1/chat/completions",
+      {
         model: "deepseek-chat",
-        reply: deepseek
-      };
-    }
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an expert AI for business, SEO, UX, marketing, and SaaS growth."
+          },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.7
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        timeout: 20000
+      }
+    );
 
-    throw new Error("DeepSeek failed");
+    return res.data?.choices?.[0]?.message?.content || null;
   } catch (err) {
-    const openaiReply = await runOpenAI(prompt);
-
-    return {
-      provider: "openai",
-      model: "gpt-4o-mini",
-      reply: openaiReply
-    };
+    console.error("DeepSeek error:", err?.response?.data || err.message);
+    return null;
   }
 }
 
 // =======================
-// MAIN API ROUTE
+// OPENAI FALLBACK (SAFE)
+// =======================
+async function runOpenAI(prompt) {
+  try {
+    const res = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You are a reliable fallback AI assistant."
+        },
+        { role: "user", content: prompt }
+      ]
+    });
+
+    return res.choices?.[0]?.message?.content || "No response";
+  } catch (err) {
+    console.error("OpenAI error:", err.message);
+    return "AI fallback failed";
+  }
+}
+
+// =======================
+// AI ROUTER
+// =======================
+async function aiRouter(prompt) {
+  const deepseek = await runDeepSeek(prompt);
+
+  if (deepseek) {
+    return {
+      provider: "deepseek",
+      model: "deepseek-chat",
+      reply: deepseek
+    };
+  }
+
+  const openaiReply = await runOpenAI(prompt);
+
+  return {
+    provider: "openai",
+    model: "gpt-4o-mini",
+    reply: openaiReply
+  };
+}
+
+// =======================
+// MAIN HANDLER
 // =======================
 export default async function handler(req, res) {
   try {
@@ -118,7 +133,7 @@ export default async function handler(req, res) {
     }
 
     // =======================
-    // AUTH (API KEY)
+    // API KEY AUTH
     // =======================
     const apiKey = req.headers["x-api-key"];
 
@@ -129,11 +144,14 @@ export default async function handler(req, res) {
       });
     }
 
-    const { data: user, error } = await supabase
+    // FIX: safer Supabase query (NO .single crash)
+    const { data: users, error } = await supabase
       .from("api_keys")
       .select("*")
       .eq("api_key", apiKey)
-      .single();
+      .limit(1);
+
+    const user = users?.[0];
 
     if (error || !user) {
       return res.status(403).json({
@@ -143,7 +161,7 @@ export default async function handler(req, res) {
     }
 
     // =======================
-    // INPUT VALIDATION
+    // INPUT
     // =======================
     const { prompt } = req.body || {};
 
@@ -166,7 +184,7 @@ export default async function handler(req, res) {
     }
 
     // =======================
-    // CACHE CHECK
+    // CACHE
     // =======================
     const key = crypto.createHash("md5").update(prompt).digest("hex");
     const cached = getCache(key);
@@ -180,22 +198,22 @@ export default async function handler(req, res) {
     }
 
     // =======================
-    // RUN AI
+    // AI CALL
     // =======================
     const ai = await aiRouter(prompt);
 
     // =======================
-    // UPDATE USAGE (IMPORTANT SaaS METRIC)
+    // UPDATE USAGE
     // =======================
     await supabase
       .from("api_keys")
       .update({
-        requests_used: user.requests_used + 1
+        requests_used: (user.requests_used || 0) + 1
       })
       .eq("api_key", apiKey);
 
     // =======================
-    // LOG (INVESTOR DATA)
+    // LOG
     // =======================
     await supabase.from("usage_logs").insert({
       api_key: apiKey,
@@ -205,29 +223,29 @@ export default async function handler(req, res) {
     });
 
     // =======================
-    // RESPONSE (FRONTEND SAFE)
+    // RESPONSE
     // =======================
     const result = {
       success: true,
       provider: ai.provider,
       model: ai.model,
       reply: ai.reply,
-      usage: user.requests_used + 1,
+      usage: (user.requests_used || 0) + 1,
       limit: user.request_limit,
-      remaining: user.request_limit - (user.requests_used + 1)
+      remaining: user.request_limit - ((user.requests_used || 0) + 1)
     };
 
     setCache(key, result);
 
-    return res.json(result);
+    return res.status(200).json(result);
 
   } catch (err) {
-    console.error("AI ROUTER ERROR:", err);
+    console.error("FATAL SERVER ERROR:", err);
 
     return res.status(500).json({
       success: false,
       error: "server_crash",
-      details: err.message
+      details: err?.message || "unknown_error"
     });
   }
 }
