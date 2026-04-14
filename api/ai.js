@@ -6,8 +6,12 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
   try {
-    // ✅ 1. Check API key
+    // ✅ 1. AUTH
     const apiKey = req.headers['x-api-key'];
 
     if (!apiKey) {
@@ -24,14 +28,32 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Invalid API key' });
     }
 
-    // ✅ 2. Validate input
-    const { prompt } = req.body || {};
+    // ✅ 2. INPUT
+    const { prompt, meta, scores } = req.body || {};
 
-    if (!prompt) {
+    if (!prompt && !meta) {
       return res.status(400).json({ error: 'No input provided' });
     }
 
-    // ✅ 3. Call DeepSeek
+    // ✅ 3. BUILD MESSAGE (SMART SWITCH)
+    let userMessage = prompt;
+
+    if (meta && scores) {
+      userMessage = `
+Analyze this website:
+Title: ${meta.title}
+Description: ${meta.description}
+
+Scores:
+SEO: ${scores.seo}
+UX: ${scores.ux}
+Conversion: ${scores.conv}
+
+Give clear actionable improvements.
+      `;
+    }
+
+    // ✅ 4. CALL DEEPSEEK
     const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -41,8 +63,14 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: [
-          { role: "system", content: "You are a powerful AI assistant." },
-          { role: "user", content: prompt }
+          {
+            role: "system",
+            content: "You are an expert AI in business, SEO, UX, and conversion optimization."
+          },
+          {
+            role: "user",
+            content: userMessage
+          }
         ],
         temperature: 0.7
       })
@@ -50,7 +78,6 @@ export default async function handler(req, res) {
 
     const aiData = await response.json();
 
-    // ⚠️ Handle API errors safely
     if (!aiData.choices) {
       return res.status(500).json({
         error: "AI request failed",
@@ -60,15 +87,16 @@ export default async function handler(req, res) {
 
     const output = aiData.choices[0].message.content;
 
-    // ✅ 4. (Optional but IMPORTANT) Track usage
+    // ✅ 5. LOG USAGE
     await supabase.from('usage_logs').insert({
       api_key: apiKey,
-      prompt: prompt,
-      response: output
+      input: userMessage,
+      output: output
     });
 
-    // ✅ 5. Return response
+    // ✅ 6. RESPONSE
     return res.status(200).json({
+      success: true,
       reply: output
     });
 
