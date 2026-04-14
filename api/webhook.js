@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { buffer } from "micro";
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 
 export const config = {
   api: { bodyParser: false }
@@ -13,6 +14,21 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
+// =========================
+// PLANS CONFIG (SaaS CORE)
+// =========================
+const PLANS = {
+  pro: {
+    limit: 1000
+  },
+  free: {
+    limit: 10
+  }
+};
+
+// =========================
+// WEBHOOK HANDLER
+// =========================
 export default async function handler(req, res) {
   const sig = req.headers["stripe-signature"];
 
@@ -27,157 +43,56 @@ export default async function handler(req, res) {
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    console.log("❌ Webhook error:", err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-await supabase.from("profiles").upsert({
-  email,
-  plan: "pro",
-  request_limit: 1000
-});
-  console.log("🔥 Stripe event:", event.type);
-
-  // =========================
-  // 💳 PAYMENT SUCCESS
-  // =========================
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-
-    const email =
-      session.customer_details?.email ||
-      session.customer_email;
-
-    if (!email) {
-      return res.status(200).json({ received: true });
-    }
-
-    // =========================
-    // 🔓 UPGRADE USER IN SUPABASE
-    // =========================
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        plan: "pro",
-        request_limit: 1000,
-        updated_at: new Date()
-      })
-      .eq("email", email);
-
-    if (error) {
-      console.log("❌ Supabase update error:", error);
-    } else {
-      console.log("✅ User upgraded to PRO:", email);
-    }
-  }
-
-  return res.status(200).json({ received: true });
-}
-
-import Stripe from 'stripe';
-import crypto from 'crypto';
-import { buffer } from 'micro';
-import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
-
-export const config = {
-  api: { bodyParser: false },
-};
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
-
-export default async function handler(req, res) {
-  const sig = req.headers['stripe-signature'];
-
-  let event;
-
-  try {
-    const buf = await buffer(req);
-
-    event = stripe.webhooks.constructEvent(
-      buf,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-
-    console.log("✅ EVENT:", event.type);
-
-  } catch (err) {
-    console.error("❌ STRIPE ERROR:", err.message);
+    console.error("❌ Stripe signature error:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // ==============================
-  // 💰 SUCCESSFUL PAYMENT
-  // ==============================
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-
-    const email =
-      session.customer_details?.email ||
-      session.customer_email;
-
-    if (!email) {
-      console.error("❌ No email found");
-      return res.status(200).json({ received: true });
-    }
-
-    // 🔑 generate API key
-    const apiKey = crypto.randomBytes(32).toString('hex');
-
-    // 💾 store user in Supabase
-    const { error } = await supabase.from('api_keys').insert({
-      stripe_session_id: session.id,
-      email,
-      user_id: email,
-      api_key: apiKey,
-      plan: 'pro',
-      usage: 0,
-      request_limit: 1000 // ✅ FIXED (important)
-    });
-
-    if (error) {
-      console.error("❌ SUPABASE ERROR:", error);
-    } else {
-      console.log("🔥 API KEY CREATED:", apiKey);
-    }
-
-    // ✉️ send email
-    try {
-      await resend.emails.send({
-        from: 'NorthSky <onboarding@resend.dev>',
-        to: email,
-        subject: 'Your NorthSky API Key 🚀',
-        html: `
-          <div style="font-family:Arial;">
-            <h2>Welcome to NorthSky AI 🚀</h2>
-            <p>Your API key is ready:</p>
-
-            <pre style="background:#111;padding:12px;border-radius:8px;color:#00ff88;">
-${apiKey}
-            </pre>
-
-            <p><b>Keep this safe — it gives access to your AI usage.</b></p>
-
-            <a href="https://north-sky-ai.vercel.app"
-               style="display:inline-block;margin-top:10px;padding:10px 16px;background:#000;color:#fff;text-decoration:none;border-radius:6px;">
-               Open Dashboard
-            </a>
-          </div>
-        `
-      });
-
-      console.log("📧 Email sent to:", email);
-
-    } catch (emailErr) {
-      console.error("❌ EMAIL ERROR:", emailErr);
-    }
+  // =========================
+  // ONLY HANDLE SUCCESS PAYMENTS
+  // =========================
+  if (event.type !== "checkout.session.completed") {
+    return res.status(200).json({ received: true });
   }
 
-  return res.status(200).json({ received: true });
+  const session = event.data.object;
+
+  const email =
+    session.customer_details?.email ||
+    session.customer_email;
+
+  if (!email) {
+    console.error("❌ Missing email in Stripe session");
+    return res.status(200).json({ received: true });
+  }
+
+  const plan = session.metadata?.plan || "pro";
+
+  // =========================
+  // IDENTITY SAFE UPSERT
+  // =========================
+  const apiKey = crypto.randomBytes(32).toString("hex");
+
+  const { error } = await supabase.from("api_keys").upsert({
+    email,
+    api_key: apiKey,
+    plan,
+    request_limit: PLANS[plan].limit,
+    usage: 0,
+    stripe_session_id: session.id,
+    updated_at: new Date().toISOString()
+  }, {
+    onConflict: "email"
+  });
+
+  if (error) {
+    console.error("❌ Supabase error:", error);
+    return res.status(500).json({ error: "db_error" });
+  }
+
+  console.log("🔥 USER UPGRADED:", email, "PLAN:", plan);
+
+  return res.status(200).json({
+    received: true,
+    upgraded: true
+  });
 }
