@@ -1,3 +1,26 @@
+await supabase
+  .from("profiles")
+  .update({
+    plan: "pro",
+    request_limit: 1000
+  })
+  .eq("id", userId);
+
+
+const userId = req.headers.authorization?.replace("Bearer ", "");
+
+const { data: user } = await supabase
+  .from("profiles")
+  .select("*")
+  .eq("id", userId)
+  .single();
+
+if (!user) {
+  return res.status(401).json({ error: "Unauthorized" });
+}
+
+
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
