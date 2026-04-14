@@ -1,80 +1,9 @@
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-  });
-});
-
-
-
-
-async function run(){
-  const input = document.getElementById("input").value;
-  const out = document.getElementById("output");
-
-  if(!input) return;
-
-  out.style.display = "block";
-  out.innerHTML = "⏳ Thinking...";
-
-  try {
-    let payload = {
-      prompt: input,
-      task: mode === "analyze" ? "analysis" :
-            mode === "search" ? "reasoning" : "chat"
-    };
-
-    // 🔐 get API key (you should store this after signup)
-    const apiKey = localStorage.getItem("northsky_key");
-
-    const res = await fetch("/api/ai", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey || ""
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-
-    if(!res.ok){
-      out.innerHTML = `
-        <div class="msg ai">
-          ❌ Error: ${data.error || "Request failed"}
-        </div>`;
-      return;
-    }
-localStorage.setItem("northsky_key", "USER_API_KEY_HERE");
-    if(mode === "ask"){
-      out.innerHTML = `
-        <div class="chat">
-          <div class="msg user">${input}</div>
-          <div class="msg ai">${data.reply}</div>
-        </div>`;
-    } else {
-      out.innerHTML = `
-        <div class="msg ai">
-          🤖 ${data.provider} (${data.model})<br><br>
-          ${data.reply}
-        </div>`;
-    }
-
-  } catch(err){
-    out.innerHTML = `
-      <div class="msg ai">
-        ⚠️ System Error: ${err.message}
-      </div>`;
-  }
-}
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>NorthSky AI Platform v3 Pro</title>
+<title>NorthSky AI Platform</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
@@ -88,28 +17,26 @@ body {
   color: white;
 }
 
-/* TOP BAR */
+/* NAV */
 .nav {
   display:flex;
   justify-content:space-between;
   padding:20px 40px;
-  font-weight:600;
 }
 
-.logo { font-size:18px; }
+.logo { font-weight:700; }
 
 .badge {
   padding:6px 10px;
   border-radius:999px;
   border:1px solid rgba(255,255,255,0.2);
   font-size:12px;
-  opacity:0.8;
 }
 
 /* HERO */
 .hero {
   text-align:center;
-  margin-top:70px;
+  margin-top:60px;
 }
 
 .hero h1 { font-size:42px; }
@@ -119,9 +46,8 @@ body {
 .box {
   display:flex;
   justify-content:center;
-  margin-top:25px;
   gap:10px;
-  padding:0 20px;
+  margin-top:25px;
 }
 
 .box input {
@@ -131,6 +57,7 @@ body {
   border:none;
   background:#0f172a;
   color:white;
+  outline:none;
 }
 
 .box button {
@@ -153,37 +80,7 @@ body {
   display:none;
 }
 
-/* LOCK SCREEN */
-.lock {
-  text-align:center;
-  margin-top:60px;
-}
-
-.lock button {
-  padding:14px 18px;
-  border-radius:12px;
-  border:none;
-  background:#22c55e;
-  color:black;
-  font-weight:700;
-  cursor:pointer;
-}
-
-/* CHAT */
-.chat {
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-.msg {
-  padding:12px;
-  border-radius:12px;
-}
-
-.user { background:#3b82f6; align-self:flex-end; }
-.ai { background:#1e293b; align-self:flex-start; }
-
+/* TABS */
 .tabbar {
   display:flex;
   justify-content:center;
@@ -204,102 +101,113 @@ body {
   background:rgba(59,130,246,0.2);
   border-color:#3b82f6;
 }
+
+/* CHAT */
+.chat {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.msg {
+  padding:12px;
+  border-radius:12px;
+}
+
+.user { background:#3b82f6; align-self:flex-end; }
+.ai { background:#1e293b; align-self:flex-start; }
+
 </style>
 </head>
 
 <body>
 
+<!-- NAV -->
 <div class="nav">
   <div class="logo">NorthSky AI</div>
-  <div class="badge" id="planBadge">FREE</div>
+  <div class="badge" id="plan">FREE</div>
 </div>
 
-<!-- LOCKED VIEW -->
-<div id="locked" class="lock">
-  <h1>🔒 Pro Required</h1>
-  <p>Unlock NorthSky AI for $29/month</p>
-  <button onclick="subscribe()">Upgrade to Pro</button>
+<!-- HERO -->
+<div class="hero">
+  <h1>NorthSky AI</h1>
+  <p>DeepSeek + OpenAI Multi-Model System</p>
 </div>
 
-<!-- APP -->
-<div id="app" style="display:none;">
-
-  <div class="tabbar">
-    <div class="tab active" onclick="mode='analyze'">Analyze</div>
-    <div class="tab" onclick="mode='search'">Search</div>
-    <div class="tab" onclick="mode='ask'">Ask</div>
-  </div>
-
-  <div class="hero">
-    <h1>NorthSky AI Platform</h1>
-    <p>Analyze • Search • Ask Anything</p>
-  </div>
-
-  <div class="box">
-    <input id="input" placeholder="Enter URL or question..." />
-    <button onclick="run()">Run</button>
-  </div>
-
-  <div id="output" class="output"></div>
+<!-- TABS -->
+<div class="tabbar">
+  <div class="tab active">analyze</div>
+  <div class="tab">search</div>
+  <div class="tab">ask</div>
 </div>
+
+<!-- INPUT -->
+<div class="box">
+  <input id="input" placeholder="Ask anything..." />
+  <button onclick="run()">Run</button>
+</div>
+
+<!-- OUTPUT -->
+<div id="output" class="output"></div>
 
 <script>
 
-const STRIPE_URL = "https://buy.stripe.com/fZu8wI2iv5qA2Fx0MM2ZO0z";
-
 let mode = "analyze";
-let isPro = localStorage.getItem("northsky_pro") === "true";
 
-/* INIT */
-window.onload = () => {
-  if(isPro) unlockUI();
-};
+/* TAB SWITCH */
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    mode = tab.innerText.toLowerCase();
+  });
+});
 
-/* SUBSCRIBE */
-function subscribe(){
-  window.location.href = STRIPE_URL;
-}
-
-/* AFTER PAYMENT (manual return trigger) */
-if(window.location.href.includes("success")){
-  localStorage.setItem("northsky_pro","true");
-  unlockUI();
-}
-
-/* UNLOCK UI */
-function unlockUI(){
-  document.getElementById("locked").style.display = "none";
-  document.getElementById("app").style.display = "block";
-  document.getElementById("planBadge").innerText = "PRO";
-  isPro = true;
-}
-
-/* RUN */
-async function run(){
+/* MAIN AI CALL (DeepSeek + OpenAI router backend) */
+async function run() {
   const input = document.getElementById("input").value;
   const out = document.getElementById("output");
 
-  if(!input) return;
+  if (!input) return;
 
   out.style.display = "block";
-  out.innerHTML = "⏳ Processing...";
+  out.innerHTML = "⏳ Thinking...";
 
-  let endpoint = "";
+  try {
+    const res = await fetch("/api/ai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": localStorage.getItem("northsky_key") || ""
+      },
+      body: JSON.stringify({
+        prompt: input,
+        task:
+          mode === "analyze" ? "analysis" :
+          mode === "search" ? "reasoning" :
+          "chat"
+      })
+    });
 
-  if(mode === "analyze") endpoint = "/api/rip?url=" + encodeURIComponent(input);
-  if(mode === "search") endpoint = "/api/search?q=" + encodeURIComponent(input);
-  if(mode === "ask") endpoint = "/api/ask?q=" + encodeURIComponent(input);
+    const data = await res.json();
 
-  const res = await fetch(endpoint);
-  const data = await res.json();
+    if (!res.ok) {
+      out.innerHTML = `<div class="msg ai">❌ ${data.error}</div>`;
+      return;
+    }
 
-  if(mode === "ask"){
-    out.innerHTML = `<div class="chat">
-      <div class="msg user">${input}</div>
-      <div class="msg ai">${data.answer || JSON.stringify(data)}</div>
-    </div>`;
-  } else {
-    out.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+    out.innerHTML = `
+      <div class="chat">
+        <div class="msg user">${input}</div>
+        <div class="msg ai">
+          🤖 ${data.provider} (${data.model})<br><br>
+          ${data.reply}
+        </div>
+      </div>
+    `;
+
+  } catch (err) {
+    out.innerHTML = `<div class="msg ai">⚠️ ${err.message}</div>`;
   }
 }
 
