@@ -1,27 +1,34 @@
-/* ================= AI (DEEPSEEK) ================= */
 app.post("/api/ai", requireAuth, async (req, res) => {
   try {
-    const { prompt } = req.body;
+    const prompt = req.body?.prompt;
 
-    if (!prompt) {
+    if (!prompt || typeof prompt !== "string") {
       return res.status(400).json({ error: "missing_prompt" });
     }
 
-    // ✅ Cache key (saves money)
+    // ======================
+    // 🧠 CACHE KEY
+    // ======================
     const key = crypto.createHash("md5").update(prompt).digest("hex");
 
-    const cached = getCache(key);
+    const cached = getCache?.(key);
     if (cached) {
       return res.json({ cached: true, ...cached });
     }
 
-    // ✅ Call DeepSeek
+    // ======================
+    // 🤖 DEEPSEEK CALL
+    // ======================
     const response = await axios.post(
       "https://api.deepseek.com/v1/chat/completions",
       {
         model: "deepseek-chat",
         messages: [
-          { role: "system", content: "You are a powerful AI assistant for business, SEO, and lead generation." },
+          {
+            role: "system",
+            content:
+              "You are an expert AI for business, SEO, marketing, and automation."
+          },
           { role: "user", content: prompt }
         ],
         temperature: 0.7
@@ -35,33 +42,38 @@ app.post("/api/ai", requireAuth, async (req, res) => {
       }
     );
 
-    const output = response.data.choices?.[0]?.message?.content;
+    const output = response?.data?.choices?.[0]?.message?.content;
 
     if (!output) {
       return res.status(500).json({
         error: "ai_failed",
-        details: response.data
+        raw: response?.data || null
       });
     }
+
+    // ======================
+    // 📊 SAFE USER USAGE
+    // ======================
+    const usage = req.user?.usage ?? 0;
+    const limit = req.user?.limit ?? 0;
 
     const result = {
       success: true,
       reply: output,
-      usage: req.user.usage,
-      remaining: req.user.limit - req.user.usage
+      usage,
+      remaining: limit - usage
     };
 
-    // ✅ Store cache
-    setCache(key, result);
+    setCache?.(key, result);
 
-    res.json(result);
+    return res.json(result);
 
   } catch (err) {
-    console.error("AI ERROR:", err.response?.data || err.message);
+    console.error("❌ AI ERROR:", err?.response?.data || err.message);
 
-    res.status(500).json({
+    return res.status(500).json({
       error: "ai_crash",
-      details: err.response?.data || err.message
+      details: err?.response?.data || err.message
     });
   }
 });
