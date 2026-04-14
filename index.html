@@ -1,3 +1,74 @@
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+  });
+});
+
+
+
+
+async function run(){
+  const input = document.getElementById("input").value;
+  const out = document.getElementById("output");
+
+  if(!input) return;
+
+  out.style.display = "block";
+  out.innerHTML = "⏳ Thinking...";
+
+  try {
+    let payload = {
+      prompt: input,
+      task: mode === "analyze" ? "analysis" :
+            mode === "search" ? "reasoning" : "chat"
+    };
+
+    // 🔐 get API key (you should store this after signup)
+    const apiKey = localStorage.getItem("northsky_key");
+
+    const res = await fetch("/api/ai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey || ""
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if(!res.ok){
+      out.innerHTML = `
+        <div class="msg ai">
+          ❌ Error: ${data.error || "Request failed"}
+        </div>`;
+      return;
+    }
+localStorage.setItem("northsky_key", "USER_API_KEY_HERE");
+    if(mode === "ask"){
+      out.innerHTML = `
+        <div class="chat">
+          <div class="msg user">${input}</div>
+          <div class="msg ai">${data.reply}</div>
+        </div>`;
+    } else {
+      out.innerHTML = `
+        <div class="msg ai">
+          🤖 ${data.provider} (${data.model})<br><br>
+          ${data.reply}
+        </div>`;
+    }
+
+  } catch(err){
+    out.innerHTML = `
+      <div class="msg ai">
+        ⚠️ System Error: ${err.message}
+      </div>`;
+  }
+}
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
