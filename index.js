@@ -1,69 +1,46 @@
-async function run() {
-  const input = document.getElementById("input").value;
-  const out = document.getElementById("output");
+const express = require("express");
+const app = express();
 
-  if (!input) return;
+const axios = require("axios");
+const crypto = require("crypto");
 
-  out.style.display = "block";
-  out.innerHTML = "⏳ Thinking...";
+app.use(express.json());
 
-  const payload = {
-    prompt: input,
-    task: mode === "analyze"
-      ? "analysis"
-      : mode === "search"
-      ? "reasoning"
-      : "chat"
-  };
+// ======================
+// TEST ROUTE
+// ======================
+app.get("/", (req, res) => {
+  res.json({ status: "NorthSky API running" });
+});
 
-  const apiKey = localStorage.getItem("northsky_key");
-
+// ======================
+// AI ROUTE
+// ======================
+app.post("/api/ai", async (req, res) => {
   try {
-    const res = await fetch("/api/ai", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey || ""
-      },
-      body: JSON.stringify(payload)
+    const prompt = req.body?.prompt;
+
+    if (!prompt) {
+      return res.status(400).json({ error: "missing_prompt" });
+    }
+
+    return res.json({
+      success: true,
+      reply: "Server is working",
+      prompt
     });
 
-    const text = await res.text();
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      console.error("NON-JSON RESPONSE:", text);
-      throw new Error("Server did not return JSON");
-    }
-
-    if (!res.ok) {
-      out.innerHTML = `
-        <div class="msg ai">
-          ❌ ${data.error || "Request failed"}
-        </div>`;
-      return;
-    }
-
-    if (mode === "ask") {
-      out.innerHTML = `
-        <div class="chat">
-          <div class="msg user">${input}</div>
-          <div class="msg ai">${data.reply}</div>
-        </div>`;
-    } else {
-      out.innerHTML = `
-        <div class="msg ai">
-          🤖 ${data.provider || "deepseek"}<br><br>
-          ${data.reply}
-        </div>`;
-    }
-
   } catch (err) {
-    out.innerHTML = `
-      <div class="msg ai">
-        ⚠️ ${err.message}
-      </div>`;
+    console.error(err);
+    return res.status(500).json({ error: "server_error" });
   }
-}
+});
+
+// ======================
+// START SERVER (RENDER NEEDS THIS)
+// ======================
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("🚀 Server running on port", PORT);
+});
