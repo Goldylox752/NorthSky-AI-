@@ -1,79 +1,69 @@
-app.post("/api/ai", requireAuth, async (req, res) => {
+async function run() {
+  const input = document.getElementById("input").value;
+  const out = document.getElementById("output");
+
+  if (!input) return;
+
+  out.style.display = "block";
+  out.innerHTML = "⏳ Thinking...";
+
+  const payload = {
+    prompt: input,
+    task: mode === "analyze"
+      ? "analysis"
+      : mode === "search"
+      ? "reasoning"
+      : "chat"
+  };
+
+  const apiKey = localStorage.getItem("northsky_key");
+
   try {
-    const prompt = req.body?.prompt;
-
-    if (!prompt || typeof prompt !== "string") {
-      return res.status(400).json({ error: "missing_prompt" });
-    }
-
-    // ======================
-    // 🧠 CACHE KEY
-    // ======================
-    const key = crypto.createHash("md5").update(prompt).digest("hex");
-
-    const cached = getCache?.(key);
-    if (cached) {
-      return res.json({ cached: true, ...cached });
-    }
-
-    // ======================
-    // 🤖 DEEPSEEK CALL
-    // ======================
-    const response = await axios.post(
-      "https://api.deepseek.com/v1/chat/completions",
-      {
-        model: "deepseek-chat",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an expert AI for business, SEO, marketing, and automation."
-          },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.7
+    const res = await fetch("/api/ai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey || ""
       },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        timeout: 20000
-      }
-    );
+      body: JSON.stringify(payload)
+    });
 
-    const output = response?.data?.choices?.[0]?.message?.content;
+    const text = await res.text();
 
-    if (!output) {
-      return res.status(500).json({
-        error: "ai_failed",
-        raw: response?.data || null
-      });
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error("NON-JSON RESPONSE:", text);
+      throw new Error("Server did not return JSON");
     }
 
-    // ======================
-    // 📊 SAFE USER USAGE
-    // ======================
-    const usage = req.user?.usage ?? 0;
-    const limit = req.user?.limit ?? 0;
+    if (!res.ok) {
+      out.innerHTML = `
+        <div class="msg ai">
+          ❌ ${data.error || "Request failed"}
+        </div>`;
+      return;
+    }
 
-    const result = {
-      success: true,
-      reply: output,
-      usage,
-      remaining: limit - usage
-    };
-
-    setCache?.(key, result);
-
-    return res.json(result);
+    if (mode === "ask") {
+      out.innerHTML = `
+        <div class="chat">
+          <div class="msg user">${input}</div>
+          <div class="msg ai">${data.reply}</div>
+        </div>`;
+    } else {
+      out.innerHTML = `
+        <div class="msg ai">
+          🤖 ${data.provider || "deepseek"}<br><br>
+          ${data.reply}
+        </div>`;
+    }
 
   } catch (err) {
-    console.error("❌ AI ERROR:", err?.response?.data || err.message);
-
-    return res.status(500).json({
-      error: "ai_crash",
-      details: err?.response?.data || err.message
-    });
+    out.innerHTML = `
+      <div class="msg ai">
+        ⚠️ ${err.message}
+      </div>`;
   }
-});
+}
