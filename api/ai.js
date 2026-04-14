@@ -1,3 +1,12 @@
+const OpenAI = require("openai");
+const axios = require("axios");
+const crypto = require("crypto");
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+
 app.post("/api/ai", requireAuth, async (req, res) => {
   try {
     res.setHeader("Content-Type", "application/json");
