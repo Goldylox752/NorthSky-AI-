@@ -1,3 +1,95 @@
+export default async function handler(req, res) {
+  try {
+    res.setHeader("Content-Type", "application/json");
+
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "method_not_allowed" });
+    }
+
+    const apiKey = req.headers["x-api-key"];
+
+    if (!apiKey) {
+      return res.status(401).json({ error: "missing_api_key" });
+    }
+
+    const { data: user } = await supabase
+      .from("api_keys")
+      .select("*")
+      .eq("api_key", apiKey)
+      .single();
+
+    if (!user) {
+      return res.status(403).json({ error: "invalid_api_key" });
+    }
+
+    const { prompt } = req.body || {};
+
+    if (!prompt) {
+      return res.status(400).json({ error: "missing_prompt" });
+    }
+
+    // ======================
+    // LIMIT CHECK
+    // ======================
+    if (user.requests_used >= user.request_limit) {
+      return res.status(429).json({
+        error: "limit_reached",
+        plan: user.plan
+      });
+    }
+
+    // ======================
+    // AI RUN
+    // ======================
+    const ai = await aiRouter(prompt, user.plan);
+
+    // ======================
+    // UPDATE USAGE (INVESTOR METRIC)
+    // ======================
+    await supabase
+      .from("api_keys")
+      .update({
+        requests_used: user.requests_used + 1
+      })
+      .eq("api_key", apiKey);
+
+    // ======================
+    // LOG (INVESTOR ANALYTICS)
+    // ======================
+    await supabase.from("usage_logs").insert({
+      api_key: apiKey,
+      model: ai.model,
+      prompt: prompt,
+      cost: user.plan === "free" ? 0.001 : 0.003
+    });
+
+    // ======================
+    // RESPONSE
+    // ======================
+    return res.json({
+      success: true,
+      provider: ai.provider,
+      model: ai.model,
+      reply: ai.reply,
+      usage: user.requests_used + 1,
+      limit: user.request_limit,
+      remaining: user.request_limit - (user.requests_used + 1)
+    });
+
+  } catch (err) {
+    console.error("AI ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      error: "server_error",
+      details: err.message
+    });
+  }
+}
+
+
+
+
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 import axios from "axios";
