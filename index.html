@@ -13,7 +13,7 @@
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background: radial-gradient(circle at top, #1e293b, #020617);
+  background: radial-gradient(circle at top, #0f172a, #020617);
   color: white;
 }
 
@@ -22,6 +22,7 @@ body {
   display:flex;
   justify-content:space-between;
   padding:20px 40px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
 }
 
 .logo { font-weight:700; }
@@ -36,11 +37,48 @@ body {
 /* HERO */
 .hero {
   text-align:center;
-  margin-top:60px;
+  margin-top:50px;
 }
 
-.hero h1 { font-size:42px; }
+.hero h1 { font-size:44px; }
 .hero p { opacity:0.6; }
+
+/* PAYWALL */
+.paywall {
+  max-width:800px;
+  margin:40px auto;
+  text-align:center;
+}
+
+.plan {
+  background:#0f172a;
+  padding:18px;
+  margin:12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.price {
+  font-size:18px;
+  font-weight:700;
+  color:#22c55e;
+}
+
+.plan button {
+  width:100%;
+  margin-top:10px;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:#3b82f6;
+  color:white;
+  cursor:pointer;
+  font-weight:600;
+}
+
+.unlock {
+  background:#22c55e !important;
+}
 
 /* INPUT */
 .box {
@@ -57,7 +95,6 @@ body {
   border:none;
   background:#0f172a;
   color:white;
-  outline:none;
 }
 
 .box button {
@@ -80,28 +117,6 @@ body {
   display:none;
 }
 
-/* TABS */
-.tabbar {
-  display:flex;
-  justify-content:center;
-  gap:10px;
-  margin-top:20px;
-}
-
-.tab {
-  padding:8px 14px;
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,0.2);
-  cursor:pointer;
-  opacity:0.6;
-}
-
-.tab.active {
-  opacity:1;
-  background:rgba(59,130,246,0.2);
-  border-color:#3b82f6;
-}
-
 /* CHAT */
 .chat {
   display:flex;
@@ -117,6 +132,8 @@ body {
 .user { background:#3b82f6; align-self:flex-end; }
 .ai { background:#1e293b; align-self:flex-start; }
 
+.hidden { display:none; }
+
 </style>
 </head>
 
@@ -125,46 +142,92 @@ body {
 <!-- NAV -->
 <div class="nav">
   <div class="logo">NorthSky AI</div>
-  <div class="badge" id="plan">FREE</div>
+  <div class="badge" id="planBadge">FREE</div>
 </div>
 
 <!-- HERO -->
 <div class="hero">
   <h1>NorthSky AI</h1>
-  <p>DeepSeek + OpenAI Multi-Model System</p>
+  <p>AI Lead Engine + Roofing Territory System</p>
 </div>
 
-<!-- TABS -->
-<div class="tabbar">
-  <div class="tab active">analyze</div>
-  <div class="tab">search</div>
-  <div class="tab">ask</div>
+<!-- 🔒 PAYWALL -->
+<div id="paywall" class="paywall">
+
+  <h2>Unlock Full Access</h2>
+  <p>Choose your plan to activate AI system</p>
+
+  <div class="plan">
+    <h3>Starter</h3>
+    <div class="price">$99</div>
+    <p>Basic AI access</p>
+    <a href="https://buy.stripe.com/dRmfZae1d2eoeofgLK2ZO0C">
+      <button>Buy Starter</button>
+    </a>
+  </div>
+
+  <div class="plan">
+    <h3>Pro (Recommended)</h3>
+    <div class="price">$299</div>
+    <p>Full AI workflow + leads</p>
+    <a href="https://buy.stripe.com/aFaeV6cX97yIfsjcvu2ZO0E">
+      <button>Buy Pro</button>
+    </a>
+  </div>
+
+  <div class="plan">
+    <h3>Elite</h3>
+    <div class="price">$999</div>
+    <p>Exclusive territory + priority AI</p>
+    <a href="https://buy.stripe.com/dRm28k8GTaKU1Btcvu2ZO0D">
+      <button>Buy Elite</button>
+    </a>
+  </div>
+
+  <button class="unlock" onclick="unlockAccess()">
+    I’ve Paid — Continue
+  </button>
+
 </div>
 
-<!-- INPUT -->
-<div class="box">
-  <input id="input" placeholder="Ask anything..." />
-  <button onclick="run()">Run</button>
-</div>
+<!-- 🔓 APP -->
+<div id="app" class="hidden">
 
-<!-- OUTPUT -->
-<div id="output" class="output"></div>
+  <div class="box">
+    <input id="input" placeholder="Ask anything..." />
+    <button onclick="run()">Run</button>
+  </div>
+
+  <div id="output" class="output"></div>
+
+</div>
 
 <script>
 
 let mode = "analyze";
 
-/* TAB SWITCH */
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    mode = tab.innerText.toLowerCase();
-  });
-});
+/* CHECK ACCESS */
+function unlockAccess(){
+  localStorage.setItem("northsky_paid", "true");
+  document.getElementById("paywall").style.display = "none";
+  document.getElementById("app").classList.remove("hidden");
+  document.getElementById("planBadge").innerText = "PRO";
+}
 
-/* MAIN AI CALL (DeepSeek + OpenAI router backend) */
+window.onload = () => {
+  if(localStorage.getItem("northsky_paid") === "true"){
+    unlockAccess();
+  }
+};
+
+/* AI RUN */
 async function run() {
+
+  if(localStorage.getItem("northsky_paid") !== "true"){
+    alert("Please purchase a plan to continue.");
+    return;
+  }
+
   const input = document.getElementById("input").value;
   const out = document.getElementById("output");
 
@@ -178,14 +241,12 @@ async function run() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": localStorage.getItem("northsky_key") || ""
+        "x-api-key": localStorage.getItem("northsky_key") || "",
+        "x-user-email": localStorage.getItem("northsky_email") || ""
       },
       body: JSON.stringify({
-        prompt: input,
-        task:
-          mode === "analyze" ? "analysis" :
-          mode === "search" ? "reasoning" :
-          "chat"
+        message: input,
+        mode: mode
       })
     });
 
@@ -200,7 +261,7 @@ async function run() {
       <div class="chat">
         <div class="msg user">${input}</div>
         <div class="msg ai">
-          🤖 ${data.provider} (${data.model})<br><br>
+          🤖 ${data.plan.toUpperCase()} USER<br><br>
           ${data.reply}
         </div>
       </div>
