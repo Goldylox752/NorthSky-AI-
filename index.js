@@ -1,3 +1,28 @@
+window.NorthSkyOS = {
+  track(event, data) {
+    fetch("https://your-api.com/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event,
+        data,
+        session: localStorage.getItem("ns_session_id"),
+        user: localStorage.getItem("ns_user_id"),
+        score: localStorage.getItem("ns_score"),
+        url: location.href
+      })
+    });
+  },
+
+  route(score) {
+    if (score >= 15) {
+      window.location.href = "https://goldylox752.github.io/RoofFlow-AI/";
+    }
+  }
+};
+
+
+
 require('dotenv').config();
 
 const express = require('express');
