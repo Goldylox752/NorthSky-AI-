@@ -1,167 +1,92 @@
-window.NorthSkyOS = {
-  track(event, data) {
-    fetch("https://your-api.com/event", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        event,
-        data,
-        session: localStorage.getItem("ns_session_id"),
-        user: localStorage.getItem("ns_user_id"),
-        score: localStorage.getItem("ns_score"),
-        url: location.href
-      })
-    });
-  },
+require("dotenv").config();
 
-  route(score) {
-    if (score >= 15) {
-      window.location.href = "https://goldylox752.github.io/RoofFlow-AI/";
-    }
-  }
-};
-
-
-
-require('dotenv').config();
-
-const express = require('express');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const { createClient } = require('@supabase/supabase-js');
-const axios = require('axios');
+const express = require("express");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const { createClient } = require("@supabase/supabase-js");
+const axios = require("axios");
 
 const app = express();
 
-/* =========================
-   SECURITY LAYER
-========================= */
-
+/* ================= SECURITY ================= */
 app.use(helmet());
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: "15kb" }));
 
-/* =========================
-   SUPABASE
-========================= */
-
+/* ================= SUPABASE ================= */
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
 );
 
-/* =========================
-   SIMPLE IN-MEMORY CACHE (FIX SPEED ISSUE)
-========================= */
-
+/* ================= FAST API KEY CACHE ================= */
 const keyCache = new Map();
 
 async function validateKey(key) {
   if (!key) return false;
-
   if (keyCache.has(key)) return keyCache.get(key);
 
-  const { data, error } = await supabase
-    .from('api_keys')
-    .select('id, active')
-    .eq('key', key)
+  const { data } = await supabase
+    .from("api_keys")
+    .select("active")
+    .eq("key", key)
     .single();
 
-  const valid = !!data && data.active === true;
+  const valid = !!data?.active;
 
   keyCache.set(key, valid);
-
-  // auto expire cache after 5 min
   setTimeout(() => keyCache.delete(key), 300000);
 
   return valid;
 }
 
-/* =========================
-   AUTH MIDDLEWARE
-========================= */
-
+/* ================= AUTH ================= */
 async function auth(req, res, next) {
-  try {
-    const key = req.headers['x-api-key'];
-
-    if (!(await validateKey(key))) {
-      return res.status(403).json({
-        error: "Invalid API key"
-      });
-    }
-
-    next();
-  } catch (err) {
-    return res.status(500).json({
-      error: "Auth system failure"
-    });
+  const key = req.headers["x-api-key"];
+  if (!(await validateKey(key))) {
+    return res.status(403).json({ error: "Invalid API key" });
   }
+  next();
 }
 
-/* =========================
-   RATE LIMIT (SMARTER)
-========================= */
-
-const aiRateLimiter = rateLimit({
+/* ================= RATE LIMIT ================= */
+const limiter = rateLimit({
   windowMs: 60 * 1000,
-  max: (req) => {
-    // future upgrade hook for paid tiers
-    return 20;
+  max: 25
+});
+
+/* ================= EVENT PIPELINE (🔥 CORE VALUE) ================= */
+app.post("/api/event", async (req, res) => {
+  const event = req.body;
+
+  try {
+    await supabase.from("events").insert([{
+      ...event,
+      created_at: new Date().toISOString()
+    }]);
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: "log_failed" });
   }
 });
 
-/* =========================
-   CRM LOGGING (IMPORTANT UPGRADE)
-========================= */
-
-async function logEvent(payload) {
-  try {
-    await supabase.from('ai_logs').insert([payload]);
-  } catch (e) {
-    console.log("Log fail (non-critical)");
-  }
-}
-
-/* =========================
-   AI ROUTE (REVENUE ENGINE)
-========================= */
-
-app.post('/api/ai', aiRateLimiter, auth, async (req, res) => {
+/* ================= AI ENGINE ================= */
+app.post("/api/ai", limiter, auth, async (req, res) => {
 
   try {
+    const { message, mode = "chat" } = req.body;
 
-    const {
-      message,
-      mode = "chat",
-      session_id,
-      user_id
-    } = req.body;
-
-    if (!message) {
-      return res.status(400).json({ error: "Missing message" });
-    }
-
-    /* normalize mode */
-    const safeMode =
-      mode === "analyze" ? "analysis" :
-      mode === "search" ? "reasoning" :
-      "chat";
-
-    const start = Date.now();
-
-    const ai = await axios.post(
+    const response = await axios.post(
       process.env.AI_API_URL,
       {
         model: "deepseek-chat",
         messages: [
           {
             role: "system",
-            content: `You are NorthSky AI. Mode: ${safeMode}. Focus on business growth, leads, and conversions.`
+            content:
+              "You are NorthSky Revenue OS AI. Optimize for leads, sales, conversions."
           },
-          {
-            role: "user",
-            content: message
-          }
+          { role: "user", content: message }
         ]
       },
       {
@@ -171,58 +96,21 @@ app.post('/api/ai', aiRateLimiter, auth, async (req, res) => {
       }
     );
 
-    const reply = ai.data?.choices?.[0]?.message?.content;
-
-    const latency = Date.now() - start;
-
-    /* =========================
-       LOG EVERYTHING (THIS IS YOUR MONEY DATA)
-    ========================= */
-
-    const logPayload = {
-      message,
-      reply,
-      mode: safeMode,
-      session_id: session_id || null,
-      user_id: user_id || null,
-      latency,
-      created_at: new Date().toISOString()
-    };
-
-    logEvent(logPayload);
-
-    return res.json({
+    res.json({
       success: true,
-      reply,
-      provider: "DeepSeek",
-      model: "deepseek-chat",
-      latency
+      reply: response.data?.choices?.[0]?.message?.content
     });
 
-  } catch (err) {
-    console.error(err.message);
-
-    return res.status(500).json({
-      error: "AI request failed"
-    });
+  } catch (e) {
+    res.status(500).json({ error: "ai_failed" });
   }
 });
 
-/* =========================
-   HEALTH CHECK
-========================= */
-
-app.get('/', (req, res) => {
-  res.json({
-    status: "OK",
-    system: "NorthSky Revenue OS API"
-  });
+/* ================= HEALTH ================= */
+app.get("/", (_, res) => {
+  res.json({ status: "ok", system: "NorthSky OS" });
 });
 
-/* =========================
-   START SERVER
-========================= */
-
 app.listen(process.env.PORT || 3000, () => {
-  console.log("🚀 NorthSky OS API running");
+  console.log("🚀 NorthSky Revenue OS running");
 });
