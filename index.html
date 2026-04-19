@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>NorthSky AI Platform</title>
+<title>NorthSky Revenue OS</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
@@ -21,256 +21,191 @@ body {
 .nav {
   display:flex;
   justify-content:space-between;
-  padding:20px 40px;
+  padding:20px 30px;
   border-bottom:1px solid rgba(255,255,255,0.08);
 }
 
-.logo { font-weight:700; }
-
+.logo { font-weight:800; }
 .badge {
   padding:6px 10px;
   border-radius:999px;
   border:1px solid rgba(255,255,255,0.2);
   font-size:12px;
+  opacity:0.8;
 }
 
 /* HERO */
 .hero {
   text-align:center;
-  margin-top:50px;
+  margin-top:40px;
+  padding:0 20px;
 }
 
-.hero h1 { font-size:44px; }
-.hero p { opacity:0.6; }
+.hero h1 { font-size:40px; line-height:1.1; }
+.hero p { opacity:0.65; margin-top:10px; }
 
-/* PAYWALL */
-.paywall {
-  max-width:800px;
+/* GRID */
+.grid {
+  max-width:900px;
   margin:40px auto;
-  text-align:center;
+  padding:0 20px;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:14px;
 }
 
-.plan {
-  background:#0f172a;
-  padding:18px;
-  margin:12px;
-  border-radius:14px;
+/* CARD */
+.card {
+  background:rgba(255,255,255,0.04);
   border:1px solid rgba(255,255,255,0.08);
+  border-radius:16px;
+  padding:16px;
 }
 
-.price {
-  font-size:18px;
+/* BUTTONS */
+.btn {
+  display:block;
+  margin-top:12px;
+  padding:14px;
+  border-radius:12px;
+  text-align:center;
   font-weight:700;
-  color:#22c55e;
+  text-decoration:none;
+  color:black;
+  background:#22c55e;
 }
 
-.plan button {
-  width:100%;
-  margin-top:10px;
-  padding:12px;
-  border:none;
-  border-radius:10px;
-  background:#3b82f6;
-  color:white;
-  cursor:pointer;
-  font-weight:600;
-}
-
-.unlock {
-  background:#22c55e !important;
-}
+.btn.blue { background:#3b82f6; color:white; }
 
 /* INPUT */
-.box {
+.inputBox {
   display:flex;
-  justify-content:center;
   gap:10px;
-  margin-top:25px;
+  margin-top:12px;
 }
 
-.box input {
-  width:60%;
-  padding:16px;
+input {
+  flex:1;
+  padding:14px;
   border-radius:12px;
-  border:none;
+  border:1px solid rgba(255,255,255,0.1);
   background:#0f172a;
   color:white;
-}
-
-.box button {
-  padding:16px 20px;
-  border-radius:12px;
-  border:none;
-  background:#3b82f6;
-  color:white;
-  cursor:pointer;
-  font-weight:600;
 }
 
 /* OUTPUT */
 .output {
-  max-width:800px;
-  margin:40px auto;
-  padding:20px;
-  background:rgba(15,23,42,0.6);
-  border-radius:16px;
-  display:none;
-}
-
-/* CHAT */
-.chat {
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-.msg {
+  margin-top:12px;
   padding:12px;
+  background:#0f172a;
   border-radius:12px;
+  display:none;
+  white-space:pre-wrap;
+  font-size:13px;
+  color:rgba(255,255,255,0.75);
 }
-
-.user { background:#3b82f6; align-self:flex-end; }
-.ai { background:#1e293b; align-self:flex-start; }
-
-.hidden { display:none; }
-
 </style>
 </head>
 
 <body>
 
-<!-- NAV -->
 <div class="nav">
-  <div class="logo">NorthSky AI</div>
-  <div class="badge" id="planBadge">FREE</div>
+  <div class="logo">NorthSky Revenue OS</div>
+  <div class="badge" id="status">FREE MODE</div>
 </div>
 
-<!-- HERO -->
 <div class="hero">
-  <h1>NorthSky AI</h1>
-  <p>AI Lead Engine + Roofing Territory System</p>
+  <h1>Turn Traffic Into Revenue Systems</h1>
+  <p>Lead Engine → AI Conversion → Automated Funnel Routing</p>
 </div>
 
-<!-- 🔒 PAYWALL -->
-<div id="paywall" class="paywall">
+<div class="grid">
 
-  <h2>Unlock Full Access</h2>
-  <p>Choose your plan to activate AI system</p>
+  <!-- ROOFFLOW -->
+  <div class="card">
+    <h3>1. RoofFlow AI (Lead Engine)</h3>
+    <p style="opacity:0.7;font-size:13px;">
+      Generates roofing leads + feeds funnel automatically.
+    </p>
 
-  <div class="plan">
-    <h3>Starter</h3>
-    <div class="price">$99</div>
-    <p>Basic AI access</p>
-    <a href="https://buy.stripe.com/dRmfZae1d2eoeofgLK2ZO0C">
-      <button>Buy Starter</button>
+    <a class="btn blue" href="https://goldylox752.github.io/RoofFlow-AI/" target="_blank">
+      Open Lead Engine
     </a>
   </div>
 
-  <div class="plan">
-    <h3>Pro (Recommended)</h3>
-    <div class="price">$299</div>
-    <p>Full AI workflow + leads</p>
-    <a href="https://buy.stripe.com/aFaeV6cX97yIfsjcvu2ZO0E">
-      <button>Buy Pro</button>
+  <!-- AI CORE -->
+  <div class="card">
+    <h3>2. AI Conversion Layer</h3>
+
+    <div class="inputBox">
+      <input id="msg" placeholder="Enter lead / message..." />
+      <button class="btn blue" onclick="runAI()">Run</button>
+    </div>
+
+    <div id="out" class="output"></div>
+  </div>
+
+  <!-- ROUTING -->
+  <div class="card">
+    <h3>3. Funnel Router</h3>
+    <p style="opacity:0.7;font-size:13px;">
+      Push high-intent users into RoofFlow or checkout automatically.
+    </p>
+
+    <a class="btn" href="https://buy.stripe.com/aFaeV6cX97yIfsjcvu2ZO0E">
+      Upgrade System ($299)
     </a>
   </div>
-
-  <div class="plan">
-    <h3>Elite</h3>
-    <div class="price">$999</div>
-    <p>Exclusive territory + priority AI</p>
-    <a href="https://buy.stripe.com/dRm28k8GTaKU1Btcvu2ZO0D">
-      <button>Buy Elite</button>
-    </a>
-  </div>
-
-  <button class="unlock" onclick="unlockAccess()">
-    I’ve Paid — Continue
-  </button>
-
-</div>
-
-<!-- 🔓 APP -->
-<div id="app" class="hidden">
-
-  <div class="box">
-    <input id="input" placeholder="Ask anything..." />
-    <button onclick="run()">Run</button>
-  </div>
-
-  <div id="output" class="output"></div>
 
 </div>
 
 <script>
-
-let mode = "analyze";
-
-/* CHECK ACCESS */
-function unlockAccess(){
-  localStorage.setItem("northsky_paid", "true");
-  document.getElementById("paywall").style.display = "none";
-  document.getElementById("app").classList.remove("hidden");
-  document.getElementById("planBadge").innerText = "PRO";
-}
-
-window.onload = () => {
-  if(localStorage.getItem("northsky_paid") === "true"){
-    unlockAccess();
-  }
+const state = {
+  score: parseInt(localStorage.getItem("ns_score") || "0")
 };
 
-/* AI RUN */
-async function run() {
+/* SIMPLE AI GATE */
+function runAI(){
 
-  if(localStorage.getItem("northsky_paid") !== "true"){
-    alert("Please purchase a plan to continue.");
-    return;
-  }
+  const input = document.getElementById("msg").value;
+  const out = document.getElementById("out");
 
-  const input = document.getElementById("input").value;
-  const out = document.getElementById("output");
-
-  if (!input) return;
+  if(!input) return;
 
   out.style.display = "block";
-  out.innerHTML = "⏳ Thinking...";
+  out.innerText = "Processing lead...";
 
-  try {
-    const res = await fetch("/api/ai", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": localStorage.getItem("northsky_key") || "",
-        "x-user-email": localStorage.getItem("northsky_email") || ""
-      },
-      body: JSON.stringify({
-        message: input,
-        mode: mode
-      })
-    });
+  // fake routing logic (replace with /api/ai later)
+  let stage = "COLD";
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      out.innerHTML = `<div class="msg ai">❌ ${data.error}</div>`;
-      return;
-    }
-
-    out.innerHTML = `
-      <div class="chat">
-        <div class="msg user">${input}</div>
-        <div class="msg ai">
-          🤖 ${data.plan.toUpperCase()} USER<br><br>
-          ${data.reply}
-        </div>
-      </div>
-    `;
-
-  } catch (err) {
-    out.innerHTML = `<div class="msg ai">⚠️ ${err.message}</div>`;
+  if(input.toLowerCase().includes("quote") || input.toLowerCase().includes("roof")) {
+    stage = "HOT";
+    state.score += 10;
+  } else {
+    state.score += 2;
   }
+
+  localStorage.setItem("ns_score", state.score);
+
+  const route =
+    stage === "HOT"
+      ? "👉 Send to RoofFlow AI + Sales Funnel"
+      : "👉 Nurture in AI system";
+
+  out.innerText =
+`Lead Score: ${state.score}
+Stage: ${stage}
+
+Action:
+${route}`;
 }
+
+/* STATUS */
+setInterval(() => {
+  const score = localStorage.getItem("ns_score") || 0;
+  document.getElementById("status").innerText =
+    score > 15 ? "HOT TRAFFIC" : "FREE MODE";
+}, 1000);
 
 </script>
 
